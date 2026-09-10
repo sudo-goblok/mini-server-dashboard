@@ -13,6 +13,100 @@ from flask import Flask, render_template, jsonify, request, session, redirect, u
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+DASHBOARD_GPU_SCROLL_STYLE = """
+<style id="dashboard-gpu-scroll-fix">
+    /* Keep the card/header fixed; only the GPU grid itself may scroll. */
+    .card[data-card-id="gpu"] {
+        overflow-y: hidden;
+    }
+
+    .card[data-card-id="gpu"] > .gpu-grid {
+        max-height: 390px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 6px;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-light) transparent;
+    }
+
+    .card[data-card-id="gpu"] > .gpu-grid::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .card[data-card-id="gpu"] > .gpu-grid::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 999px;
+    }
+
+    .card[data-card-id="gpu"] > .gpu-grid::-webkit-scrollbar-thumb {
+        background: var(--border-light);
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background-clip: padding-box;
+    }
+
+    .card[data-card-id="gpu"] > .gpu-grid::-webkit-scrollbar-thumb:hover {
+        background: var(--gpu-color);
+        background-clip: padding-box;
+    }
+
+    /* JS currently adds many-gpu; keep the responsive two-column layout working. */
+    @media (min-width: 500px) {
+        .gpu-grid.many-gpu {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .gpu-grid.single-gpu {
+        grid-template-columns: 1fr !important;
+    }
+</style>
+"""
+
+DASHBOARD_RUNTIME_FIX = """
+<script id="dashboard-runtime-fix">
+(function () {
+    /*
+     * The df-style disk change replaced fmtBytes() with fmtBytesDF(), while
+     * memory/network/GPU rendering still calls fmtBytes(). Restore the generic
+     * formatter so one missing helper cannot abort the entire refresh cycle.
+     */
+    if (typeof window.fmtBytes !== 'function') {
+        window.fmtBytes = function (bytes, decimals) {
+            const d = decimals === undefined ? 1 : decimals;
+            const value = Number(bytes);
+            if (!Number.isFinite(value) || value <= 0) return value === 0 ? '0 B' : '—';
+            const k = 1024;
+            const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            const i = Math.min(Math.floor(Math.log(value) / Math.log(k)), units.length - 1);
+            return (value / Math.pow(k, i)).toFixed(d) + ' ' + units[i];
+        };
+    }
+
+    /* Restore the default-disk summary that was accidentally removed. */
+    const originalRenderDisks = window.renderDisks;
+    if (typeof originalRenderDisks === 'function') {
+        window.renderDisks = function (disks, defaultDisk) {
+            originalRenderDisks(disks, defaultDisk);
+            const disk = defaultDisk || (Array.isArray(disks) && disks.length ? disks[0] : null);
+            if (!disk) return;
+
+            const percent = Number(disk.percent) || 0;
+            const available = disk.available !== undefined ? disk.available : disk.free;
+            document.getElementById('disk-pct').textContent = percent.toFixed(1);
+            document.getElementById('disk-bar').style.width = Math.max(0, Math.min(100, percent)) + '%';
+            document.getElementById('disk-bar-label').textContent = percent.toFixed(1) + '%';
+            document.getElementById('disk-used').textContent = window.fmtBytes(disk.used) + ' used (' + (disk.mountpoint || '—') + ')';
+            document.getElementById('disk-total').textContent = window.fmtBytes(disk.total);
+            document.getElementById('disk-free').textContent = window.fmtBytes(available);
+        };
+    }
+})();
+</script>
+"""
+
 def check_auth(username, password):
     """Verify Linux user credentials using PAM."""
     try:
@@ -162,12 +256,10 @@ def get_disk_detail():
     for part in psutil.disk_partitions(all=False):
         try:
             usage = psutil.disk_usage(part.mountpoint)
-            # device: use the device path (e.g., /dev/nvme0n1p2)
             device = part.device
-            # filesystem: take the last component of device path, or device itself
             filesystem = os.path.basename(device) if device else device
             disks.append({
-                'filesystem': filesystem,   # /dev/nvme0n1p2 -> nvme0n1p2, but keep full for clarity
+                'filesystem': filesystem,
                 'device': device,
                 'mountpoint': part.mountpoint,
                 'fstype': part.fstype,
@@ -201,7 +293,6 @@ def get_system_stats():
 
     mem = psutil.virtual_memory()
 
-    # Disk: full detail like df -h
     disks = get_disk_detail()
     default_disk = None
     for d in disks:
@@ -277,12 +368,17 @@ def get_system_stats():
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html')
+    html = render_template('index.html')
+    html = html.replace('</head>', DASHBOARD_GPU_SCROLL_STYLE + '\n</head>')
+    html = html.replace('</body>', DASHBOARD_RUNTIME_FIX + '\n</body>')
+    return html
 
 @app.route('/data')
 @login_required
 def data():
-    return jsonify(get_system_stats())
+    stats = get_system_stats()
+    stats['user'] = session.get('username')
+    return jsonify(stats)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

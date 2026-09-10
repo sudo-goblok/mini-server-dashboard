@@ -162,18 +162,22 @@ def get_disk_detail():
     for part in psutil.disk_partitions(all=False):
         try:
             usage = psutil.disk_usage(part.mountpoint)
+            # device: use the device path (e.g., /dev/nvme0n1p2)
+            device = part.device
+            # filesystem: take the last component of device path, or device itself
+            filesystem = os.path.basename(device) if device else device
             disks.append({
-                'device': part.device,
+                'filesystem': filesystem,   # /dev/nvme0n1p2 -> nvme0n1p2, but keep full for clarity
+                'device': device,
                 'mountpoint': part.mountpoint,
                 'fstype': part.fstype,
                 'opts': part.opts,
                 'total': usage.total,
                 'used': usage.used,
-                'free': usage.free,
+                'available': usage.free,
                 'percent': usage.percent
             })
         except PermissionError:
-            # Some mountpoints require root
             continue
         except Exception:
             continue

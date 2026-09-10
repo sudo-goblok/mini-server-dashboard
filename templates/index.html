@@ -843,17 +843,16 @@
             <table class="disk-table" id="disk-table">
                 <thead>
                     <tr>
-                        <th>Device</th>
-                        <th>Mount</th>
-                        <th>Type</th>
-                        <th style="text-align:right">Total</th>
+                        <th>Filesystem</th>
+                        <th style="text-align:right">Size</th>
                         <th style="text-align:right">Used</th>
-                        <th style="text-align:right">Free</th>
+                        <th style="text-align:right">Avail</th>
                         <th style="text-align:right">Use%</th>
+                        <th>Mounted on</th>
                     </tr>
                 </thead>
                 <tbody id="disk-tbody">
-                    <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:12px;">Loading...</td></tr>
+                    <tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:12px;">Loading...</td></tr>
                 </tbody>
             </table>
             </div>
@@ -916,12 +915,25 @@
 </div>
 
 <script>
-function fmtBytes(b, d=1) {
-    if (b === 0) return '0 B';
-    const k = 1024;
-    const u = ['B','KB','MB','GB','TB'];
-    const i = Math.floor(Math.log(b)/Math.log(k));
-    return (b / Math.pow(k, i)).toFixed(d) + ' ' + u[i];
+function fmtBytesDF(b) {
+    // Format persis seperti df -h: GB/MB/KB tanpa spasi, misal "915G", "78G", "791G"
+    if (b >= 1024*1024*1024*1024) {
+        const tb = b / (1024*1024*1024*1024);
+        return (tb >= 10 ? tb.toFixed(0) : tb.toFixed(1)) + 'T';
+    }
+    if (b >= 1024*1024*1024) {
+        const gb = b / (1024*1024*1024);
+        return (gb >= 10 ? gb.toFixed(0) : gb.toFixed(1)) + 'G';
+    }
+    if (b >= 1024*1024) {
+        const mb = b / (1024*1024);
+        return (mb >= 10 ? mb.toFixed(0) : mb.toFixed(1)) + 'M';
+    }
+    if (b >= 1024) {
+        const kb = b / 1024;
+        return (kb >= 10 ? kb.toFixed(0) : kb.toFixed(1)) + 'K';
+    }
+    return b.toFixed(0) + 'K';
 }
 
 function fmtRate(b) {
@@ -1191,7 +1203,7 @@ function renderDisks(disks, defaultDisk) {
     const tbody = document.getElementById('disk-tbody');
     tbody.innerHTML = '';
     if (!disks || disks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:12px;">Tidak ada data disk</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:12px;">Tidak ada data disk</td></tr>';
         document.getElementById('disk-count-badge').textContent = '0';
         return;
     }
@@ -1202,34 +1214,15 @@ function renderDisks(disks, defaultDisk) {
         const pctCls = pct > 90 ? 'high' : '';
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><span class="disk-device">${d.device}</span></td>
-            <td><span class="disk-mount">${d.mountpoint}</span></td>
-            <td><span class="disk-fstype">${d.fstype || '—'}</span></td>
-            <td style="text-align:right">${fmtBytes(d.total)}</td>
-            <td style="text-align:right">${fmtBytes(d.used)}</td>
-            <td style="text-align:right">${fmtBytes(d.free)}</td>
+            <td><span class="disk-fstype">${d.filesystem || d.device}</span></td>
+            <td style="text-align:right">${fmtBytesDF(d.total)}</td>
+            <td style="text-align:right">${fmtBytesDF(d.used)}</td>
+            <td style="text-align:right">${fmtBytesDF(d.available)}</td>
             <td style="text-align:right"><span class="disk-pct ${pctCls}">${pct.toFixed(1)}%</span></td>
+            <td><span class="disk-mount">${d.mountpoint}</span></td>
         `;
         tbody.appendChild(row);
     });
-
-    // Update default disk summary (the big number at top)
-    if (defaultDisk) {
-        document.getElementById('disk-pct').textContent = defaultDisk.percent.toFixed(1);
-        document.getElementById('disk-bar').style.width = defaultDisk.percent + '%';
-        document.getElementById('disk-bar-label').textContent = defaultDisk.percent.toFixed(1) + '%';
-        document.getElementById('disk-used').textContent = fmtBytes(defaultDisk.used) + ' used (' + defaultDisk.mountpoint + ')';
-        document.getElementById('disk-total').textContent = fmtBytes(defaultDisk.total);
-        document.getElementById('disk-free').textContent = fmtBytes(defaultDisk.free);
-    } else if (disks.length > 0) {
-        const d = disks[0];
-        document.getElementById('disk-pct').textContent = d.percent.toFixed(1);
-        document.getElementById('disk-bar').style.width = d.percent + '%';
-        document.getElementById('disk-bar-label').textContent = d.percent.toFixed(1) + '%';
-        document.getElementById('disk-used').textContent = fmtBytes(d.used) + ' used';
-        document.getElementById('disk-total').textContent = fmtBytes(d.total);
-        document.getElementById('disk-free').textContent = fmtBytes(d.free);
-    }
 }
 
 function renderProcs(procs) {

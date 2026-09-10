@@ -1,38 +1,83 @@
 # Mini Server Dashboard
-Web-based system monitoring dashboard for GPU servers used in deep learning & LLM training.
+
+Lightweight Flask dashboard for monitoring and controlled management of a Linux/GPU server.
 
 ## Features
 
-- **Live monitoring** - Updates every 2 seconds
-- **CPU** - Usage, cores, frequency
-- **Memory** - Usage (used/total), percentage
-- **Disk** - Usage (used/total), percentage
-- **GPU** - Load, memory usage, temperature (NVIDIA RTX)
-- **Network I/O** - Real-time chart showing upload/download rates (MB/s)
-- **Top Processes** - Top 10 processes by CPU/memory
-- **Hostname & IP** - System hostname and all network interfaces
+- Live CPU, per-core usage, memory, disk, GPU and network monitoring (2-second refresh)
+- Persistent drag-and-drop Overview cards
+- Sidebar navigation for Overview, Services, Processes, Storage, Network, GPU and System Info
+- systemd service inventory with explicit allowlist-based Start/Stop/Restart actions
+- Process inventory with same-user SIGTERM management
+- Storage/mount detail similar to `df -h`
+- Per-interface network counters and throughput chart
+- NVIDIA GPU telemetry from `nvidia-smi` with GPUtil fallback
+- Linux PAM authentication
+- CSRF protection for management POST actions
 
-## Tech Stack
-
-- Python/Flask backend
-- psutil (system stats)
-- GPUtil (GPU stats)
-- Chart.js (network I/O visualization)
-- Bootstrap-free vanilla CSS with dark theme
-
-## Setup
+## Requirements
 
 ```bash
-pip install flask psutil gputil
+python3 -m pip install -r requirements.txt
+```
+
+## Run manually
+
+```bash
 python3 app.py
 ```
 
-Dashboard accessible at http://localhost:5000 or http://<server-ip>:5000
+Dashboard listens on `0.0.0.0:5000`.
 
-## Screenshots
+## systemd install
 
-Dark-themed dashboard with:
-- Gradient header
-- Color-coded metrics (blue=CPU, teal=mem, amber=disk, purple=GPU, green/upload, pink/download)
-- Smooth progress bars
-- Real-time Chart.js line chart for network I/O
+```bash
+sudo cp systemd/mini-server-dashboard.service /etc/systemd/system/mini-server-dashboard.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now mini-server-dashboard.service
+sudo systemctl status mini-server-dashboard.service --no-pager
+```
+
+The bundled unit assumes:
+
+- app directory: `/Apps/dashboard`
+- OS user: `deepuser`
+- Python: `/usr/bin/python3`
+
+Adjust the unit if your installation differs.
+
+## Controlled service management
+
+Service listing is read-only by default. Actions are only exposed for service names configured in `DASHBOARD_MANAGED_SERVICES`.
+
+Create a systemd override:
+
+```bash
+sudo systemctl edit mini-server-dashboard.service
+```
+
+Example:
+
+```ini
+[Service]
+Environment="DASHBOARD_MANAGED_SERVICES=docker.service,nginx.service,ssh.service"
+```
+
+Then reload/restart:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart mini-server-dashboard.service
+```
+
+The application deliberately calls `systemctl --no-ask-password` without embedding or handling sudo credentials. Start/Stop/Restart therefore also depends on the OS policy for the account running the dashboard. Configure systemd/Polkit privileges separately if you want those actions to succeed.
+
+## Security notes
+
+- Login uses Linux PAM.
+- Management requests require a session CSRF token.
+- A login can issue management actions only when the authenticated PAM username matches the OS account running the dashboard process.
+- Service names are validated and must be explicitly allowlisted; arbitrary shell commands are not accepted.
+- `mini-server-dashboard.service` cannot manage itself from the web UI.
+- Process termination is limited to processes owned by the dashboard OS user; PID 1 and the dashboard process are protected.
+- Reboot/shutdown and arbitrary terminal execution are intentionally not exposed.

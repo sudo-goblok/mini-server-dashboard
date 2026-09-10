@@ -155,12 +155,27 @@
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 18px 20px;
+            padding: 16px 18px;
             transition: border-color 0.2s;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+
+        .card.disk-card {
+            overflow-y: hidden;
+        }
+
+        .card.disk-card .disk-table-wrap {
+            max-height: 300px;
         }
 
         .card:hover {
             border-color: var(--border-light);
+        }
+
+        .card.no-scroll {
+            max-height: none;
+            overflow-y: visible;
         }
 
         .card-header {
@@ -388,6 +403,27 @@
             border-collapse: collapse;
             margin-top: 12px;
             font-size: 0.78rem;
+        }
+
+        .disk-table-wrap {
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 8px;
+            border-radius: 6px;
+        }
+
+        .disk-table-wrap::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .disk-table-wrap::-webkit-scrollbar-track {
+            background: var(--bg-main);
+            border-radius: 3px;
+        }
+
+        .disk-table-wrap::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 3px;
         }
 
         .disk-table th {
@@ -764,6 +800,7 @@
                 <span class="metric-label">Free</span>
                 <span class="metric-value" id="disk-free">—</span>
             </div>
+            <div class="disk-table-wrap">
             <table class="disk-table" id="disk-table">
                 <thead>
                     <tr>
@@ -780,6 +817,7 @@
                     <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:12px;">Loading...</td></tr>
                 </tbody>
             </table>
+            </div>
         </div>
 
         <div class="card">

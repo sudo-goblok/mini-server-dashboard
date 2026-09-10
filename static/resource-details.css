@@ -1,0 +1,86 @@
+/* Resource-detail enhancements: swap telemetry + df -h tables. */
+.resource-divider {
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+.resource-subtitle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--dim);
+    font-size: .59rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+.swap-badge {
+    color: var(--mem);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+.swap-bar {
+    height: 4px;
+    margin: 7px 0 5px;
+    background: var(--bg);
+    border-radius: 99px;
+    overflow: hidden;
+}
+.swap-fill {
+    height: 100%;
+    width: 0;
+    background: var(--mem);
+    border-radius: inherit;
+    transition: width .35s ease;
+}
+.df-card-wrap {
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+.df-scroll {
+    max-height: 165px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-2) transparent;
+}
+.df-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.df-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.df-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-2);
+    border-radius: 99px;
+}
+.df-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--disk);
+}
+.df-mini-table {
+    min-width: 570px;
+    font-size: .64rem;
+}
+.df-mini-table th {
+    padding: 7px 8px;
+    font-size: .55rem;
+}
+.df-mini-table td {
+    padding: 6px 8px;
+    white-space: nowrap;
+}
+.df-mini-table td:first-child,
+.df-mini-table td:last-child {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+.df-use-normal { color: var(--disk); font-weight: 600; }
+.df-use-high { color: var(--danger); font-weight: 650; }
+
+@media (max-width: 720px) {
+    .df-scroll { max-height: 150px; }
+}

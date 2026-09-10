@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=deepuser
 WorkingDirectory=/Apps/dashboard
-ExecStart=/usr/bin/python3 /Apps/dashboard/app.py
+ExecStart=/usr/bin/python3 /Apps/dashboard/server.py
 Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1

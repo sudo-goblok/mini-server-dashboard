@@ -3,1330 +3,324 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Server</title>
+    <title>Mini Server Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
     <style>
         :root {
-            --bg-main: #0c0f14;
-            --bg-card: #141820;
-            --bg-card-alt: #181c25;
-            --bg-row: #1c2129;
-            --border: #1e2530;
-            --border-light: #2a3340;
+            --bg: #0c0f14;
+            --sidebar: #10141b;
+            --card: #141820;
+            --card-2: #181d26;
+            --row: #1b212b;
+            --border: #202834;
+            --border-2: #303b4b;
             --text: #e8e6e1;
-            --text-muted: #7a7670;
-            --text-dim: #555250;
-
-            --cpu-color: #c9a962;
-            --cpu-glow: rgba(201, 169, 98, 0.15);
-            --mem-color: #6b8e7f;
-            --mem-glow: rgba(107, 142, 127, 0.15);
-            --disk-color: #b85d4b;
-            --disk-glow: rgba(184, 93, 75, 0.15);
-            --gpu-color: #5d7a5a;
-            --gpu-glow: rgba(93, 122, 90, 0.15);
+            --muted: #85817a;
+            --dim: #5e5b57;
+            --cpu: #c9a962;
+            --mem: #6b8e7f;
+            --disk: #b85d4b;
+            --gpu: #6f9368;
             --gpu-accent: #8ab87a;
-            --net-up-color: #d98a44;
-            --net-down-color: #7a8fa6;
-            --proc-color: #5a6e8a;
-            --proc-glow: rgba(90, 110, 138, 0.12);
-
-            --danger: #c44545;
-            --warning: #b8954a;
-            --success: #6b8e5a;
-            --power-color: #c9a962;
+            --net-up: #d98a44;
+            --net-down: #7a8fa6;
+            --proc: #6680a1;
+            --danger: #d05c5c;
+            --warning: #c3a15c;
+            --success: #79a768;
+            --sidebar-w: 238px;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
+        html { color-scheme: dark; }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-main);
-            color: var(--text);
-            font-size: 14px;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
             min-height: 100vh;
-            padding: 20px;
-        }
-
-        .app {
-            max-width: 1480px;
-            margin: 0 auto;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 18px 24px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .logo {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--cpu-color), var(--mem-color));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        .header-title {
-            font-size: 1.15rem;
-            font-weight: 500;
-            letter-spacing: -0.02em;
+            background: var(--bg);
             color: var(--text);
+            font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 14px;
+            line-height: 1.45;
+            -webkit-font-smoothing: antialiased;
         }
-
-        .header-title span {
-            color: var(--text-muted);
-            font-weight: 400;
-        }
-
-        .header-right {
+        button, input { font: inherit; }
+        button { color: inherit; }
+        .layout { min-height: 100vh; }
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: var(--sidebar-w);
+            z-index: 40;
             display: flex;
-            align-items: center;
-            gap: 24px;
-            flex-wrap: wrap;
-        }
-
-        .header-info {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.82rem;
-            color: var(--text-muted);
-        }
-
-        .header-info strong {
-            color: var(--text);
-            font-weight: 500;
-        }
-
-        .live-indicator {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.72rem;
-            color: var(--success);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-weight: 600;
-        }
-
-        .live-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--success);
-            animation: pulse-dot 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.85); }
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-
-        @media (min-width: 900px) {
-            .grid { grid-template-columns: 1fr 1fr; }
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px 18px;
-            transition: border-color 0.2s;
-            max-height: 480px;
-            overflow-y: auto;
-        }
-
-        .card.disk-card {
-            overflow-y: hidden;
-        }
-
-        .card.disk-card .disk-table-wrap {
-            max-height: 300px;
-        }
-
-        .card:hover {
-            border-color: var(--border-light);
-        }
-
-        .card.no-scroll {
-            max-height: none;
-            overflow-y: visible;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 14px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border);
-            cursor: grab;
-            user-select: none;
-        }
-
-        .card-header:active {
-            cursor: grabbing;
-        }
-
-        .sortable-ghost {
-            opacity: 0.4;
-            background: var(--bg-card-alt);
-            border: 2px dashed var(--cpu-color);
-        }
-
-        .sortable-drag {
-            opacity: 1;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-            transform: rotate(2deg);
-        }
-
-        .card-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .card-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-        }
-
-        .card-icon.cpu { background: var(--cpu-glow); color: var(--cpu-color); }
-        .card-icon.mem { background: var(--mem-glow); color: var(--mem-color); }
-        .card-icon.disk { background: var(--disk-glow); color: var(--disk-color); }
-        .card-icon.gpu { background: var(--gpu-glow); color: var(--gpu-color); }
-        .card-icon.net { background: var(--proc-glow); color: var(--net-up-color); }
-        .card-icon.proc { background: var(--proc-glow); color: var(--proc-color); }
-
-        .card-badge {
-            font-size: 0.68rem;
-            padding: 3px 8px;
-            border-radius: 4px;
-            background: var(--bg-card-alt);
-            color: var(--text-muted);
-            font-weight: 500;
-            letter-spacing: 0.03em;
-        }
-
-        .value-large {
-            font-size: 2.4rem;
-            font-weight: 600;
-            letter-spacing: -0.03em;
-            line-height: 1;
-            margin-bottom: 6px;
-        }
-
-        .value-unit {
-            font-size: 1rem;
-            color: var(--text-muted);
-            font-weight: 400;
-            margin-left: 4px;
-        }
-
-        .sub-text {
-            font-size: 0.78rem;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        .bar-track {
-            height: 6px;
-            background: var(--bg-main);
-            border-radius: 3px;
-            margin-top: 10px;
-            overflow: hidden;
-        }
-
-        .bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.35s ease;
-        }
-
-        .bar-fill.cpu { background: var(--cpu-color); }
-        .bar-fill.mem { background: var(--mem-color); }
-        .bar-fill.disk { background: var(--disk-color); }
-        .bar-fill.gpu-load { background: var(--gpu-color); }
-        .bar-fill.gpu-mem { background: var(--gpu-accent); }
-        .bar-fill.power { background: var(--power-color); }
-
-        .bar-container {
-            position: relative;
-        }
-
-        .bar-label {
-            position: absolute;
-            right: 0;
-            top: -18px;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            padding: 5px 0;
-        }
-
-        .metric-label {
-            font-size: 0.78rem;
-            color: var(--text-muted);
-        }
-
-        .metric-value {
-            font-size: 0.85rem;
-            font-weight: 500;
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* GPU grid: full width when single GPU */
-        .gpu-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-
-        .gpu-grid.single-gpu {
-            grid-template-columns: 1fr;
-        }
-
-        .gpu-grid.single-gpu .gpu-box {
-            max-width: 100%;
-        }
-
-        @media (min-width: 500px) {
-            .gpu-grid.gpu-many { grid-template-columns: 1fr 1fr; }
-        }
-
-        .gpu-box {
-            background: var(--bg-card-alt);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 16px;
-        }
-
-        .gpu-box.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .gpu-box h4 {
-            font-size: 0.8rem;
-            color: var(--gpu-color);
-            margin-bottom: 12px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .gpu-box .metric-row {
-            padding: 3px 0;
-        }
-
-        .gpu-temp {
-            display: inline-block;
-            padding: 2px 7px;
-            border-radius: 4px;
-            font-size: 0.72rem;
-            font-weight: 600;
-        }
-
-        .gpu-temp.ok { background: rgba(107, 142, 90, 0.2); color: var(--success); }
-        .gpu-temp.warn { background: rgba(184, 149, 74, 0.2); color: var(--warning); }
-        .gpu-temp.hot { background: rgba(196, 69, 69, 0.2); color: var(--danger); }
-
-        .gpu-section {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border);
-        }
-
-        .gpu-section-title {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-dim);
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-
-        .gpu-metric-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 4px 8px;
-        }
-
-        .gpu-metric-item {
-            padding: 4px 0;
-        }
-
-        .gpu-metric-label {
-            font-size: 0.62rem;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .gpu-metric-value {
-            font-size: 0.82rem;
-            font-weight: 500;
-            color: var(--cpu-color);
-            font-variant-numeric: tabular-nums;
-        }
-
-        .gpu-metric-value.power { color: var(--power-color); }
-        .gpu-metric-value.clock { color: var(--gpu-accent); }
-        .gpu-metric-value.util { color: var(--gpu-color); }
-
-        /* Disk detail table */
-        .disk-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 12px;
-            font-size: 0.78rem;
-        }
-
-        .disk-table-wrap {
-            max-height: 220px;
-            overflow-y: auto;
-            margin-top: 8px;
-            border-radius: 6px;
-        }
-
-        .disk-table-wrap::-webkit-scrollbar {
-            width: 5px;
-        }
-
-        .disk-table-wrap::-webkit-scrollbar-track {
-            background: var(--bg-main);
-            border-radius: 3px;
-        }
-
-        .disk-table-wrap::-webkit-scrollbar-thumb {
-            background: var(--border-light);
-            border-radius: 3px;
-        }
-
-        .disk-table th {
-            text-align: left;
-            padding: 8px 10px;
-            background: var(--bg-card-alt);
-            color: var(--text-dim);
-            font-weight: 600;
-            font-size: 0.68rem;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .disk-table td {
-            padding: 8px 10px;
-            border-bottom: 1px solid var(--border);
-            color: var(--text);
-            font-variant-numeric: tabular-nums;
-        }
-
-        .disk-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .disk-table tr:hover td {
-            background: var(--bg-row);
-        }
-
-        .disk-device {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--disk-color);
-            font-size: 0.72rem;
-        }
-
-        .disk-mount {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--mem-color);
-            font-size: 0.72rem;
-        }
-
-        .disk-fstype {
-            color: var(--text-muted);
-            font-size: 0.72rem;
-        }
-
-        .disk-pct {
-            font-weight: 600;
-            color: var(--disk-color);
-            text-align: right;
-        }
-
-        .disk-pct.high { color: var(--danger); }
-
-        .core-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .core-cell {
-            background: var(--bg-card-alt);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 8px 6px;
-            text-align: center;
-            font-size: 0.68rem;
-        }
-
-        .core-label {
-            color: var(--text-dim);
-            font-size: 0.6rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 4px;
-        }
-
-        .core-value {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: var(--cpu-color);
-        }
-
-        .core-bar {
-            height: 3px;
-            background: var(--bg-main);
-            border-radius: 2px;
-            margin-top: 4px;
-            overflow: hidden;
-        }
-
-        .core-bar-fill {
-            height: 100%;
-            background: var(--cpu-color);
-            transition: width 0.3s ease;
-        }
-
-        .chart-wrap {
-            height: 180px;
-            position: relative;
-        }
-
-        .chart-wrap canvas {
-            width: 100% !important;
-            height: 100% !important;
-        }
-
-        .net-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 12px;
-        }
-
-        .net-stat {
-            background: var(--bg-card-alt);
-            border-radius: 8px;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-        }
-
-        .net-stat-label {
-            font-size: 0.68rem;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text-dim);
-            margin-bottom: 4px;
-        }
-
-        .net-stat-value {
-            font-size: 1.05rem;
-            font-weight: 600;
-        }
-
-        .net-stat-value.up { color: var(--net-up-color); }
-        .net-stat-value.down { color: var(--net-down-color); }
-
-        .proc-list {
-            max-height: 220px;
-            overflow-y: auto;
-            margin-top: 4px;
-        }
-
-        .proc-list::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .proc-list::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .proc-list::-webkit-scrollbar-thumb {
-            background: var(--border-light);
-            border-radius: 2px;
-        }
-
-        .proc-item {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: 12px;
-            align-items: center;
-            padding: 6px 4px;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.78rem;
-        }
-
-        .proc-item:last-child {
-            border-bottom: none;
-        }
-
-        .proc-name {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: var(--text);
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.72rem;
-        }
-
-        .proc-cpu, .proc-mem {
-            font-weight: 500;
-            font-variant-numeric: tabular-nums;
-            min-width: 44px;
-            text-align: right;
-        }
-
-        .proc-cpu { color: var(--cpu-color); }
-        .proc-mem { color: var(--mem-color); }
-
-        .proc-cpu.high { color: var(--danger); }
-        .proc-mem.high { color: var(--mem-color); }
-
-        .ip-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 6px;
-        }
-
-        .ip-chip {
-            background: var(--bg-card-alt);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-        }
-
-        .ip-chip .iface {
-            color: var(--text-dim);
-            margin-right: 4px;
-        }
-
-        .ip-chip .addr {
-            color: var(--cpu-color);
-        }
-
-        .footer {
-            margin-top: 16px;
-            text-align: center;
-            font-size: 0.68rem;
-            color: var(--text-dim);
-            padding: 12px 0 0 0;
-            border-top: 1px solid var(--border);
-        }
-
-        .footer strong {
-            color: var(--text-muted);
-        }
-
-        .logged-in-as {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            text-align: right;
-            margin-top: 4px;
-        }
-
-        .logout-btn {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            background: none;
-            border: 1px solid var(--border);
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .logout-btn:hover {
-            color: var(--danger);
-            border-color: var(--danger);
-        }
-
-        @media (max-width: 600px) {
-            body { padding: 12px; }
-            .card { padding: 14px 16px; }
-            .value-large { font-size: 1.8rem; }
-            .header { padding: 14px 16px; }
-            .header-title { font-size: 1rem; }
-            .core-grid { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
-            .chart-wrap { height: 140px; }
-            .gpu-metric-grid { grid-template-columns: 1fr 1fr; }
-            .disk-table { font-size: 0.72rem; }
-            .disk-table th, .disk-table td { padding: 6px 8px; }
-        }
-
-        @media (max-width: 400px) {
+            flex-direction: column;
+            background: var(--sidebar);
+            border-right: 1px solid var(--border);
+            padding: 18px 14px;
+        }
+        .brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 18px; border-bottom: 1px solid var(--border); }
+        .brand-icon { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(135deg, rgba(201,169,98,.22), rgba(107,142,127,.22)); border: 1px solid var(--border-2); font-size: 17px; }
+        .brand-name { font-weight: 650; font-size: .94rem; letter-spacing: -.01em; }
+        .brand-sub { color: var(--muted); font-size: .68rem; margin-top: 1px; }
+        .nav { padding: 14px 0; overflow-y: auto; flex: 1; }
+        .nav-label { padding: 13px 9px 6px; color: var(--dim); text-transform: uppercase; letter-spacing: .11em; font-size: .61rem; font-weight: 700; }
+        .nav-item { width: 100%; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin: 2px 0; border-radius: 8px; cursor: pointer; color: var(--muted); text-align: left; transition: background .16s, color .16s; }
+        .nav-item:hover { background: rgba(255,255,255,.035); color: var(--text); }
+        .nav-item.active { background: rgba(201,169,98,.10); color: var(--cpu); box-shadow: inset 2px 0 0 var(--cpu); }
+        .nav-icon { width: 18px; text-align: center; font-size: 13px; }
+        .nav-text { font-size: .78rem; font-weight: 540; }
+        .sidebar-footer { border-top: 1px solid var(--border); padding: 13px 7px 2px; }
+        .sidebar-user { color: var(--muted); font-size: .69rem; margin-bottom: 9px; overflow: hidden; text-overflow: ellipsis; }
+        .logout { display: flex; align-items: center; justify-content: center; color: var(--muted); text-decoration: none; font-size: .71rem; border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; }
+        .logout:hover { color: var(--danger); border-color: rgba(208,92,92,.5); }
+        .main { margin-left: var(--sidebar-w); min-height: 100vh; }
+        .topbar { height: 64px; position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 0 24px; background: rgba(12,15,20,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .menu-btn { display: none; width: 34px; height: 34px; border-radius: 7px; border: 1px solid var(--border); background: var(--card); cursor: pointer; }
+        .page-title { font-size: 1rem; font-weight: 620; letter-spacing: -.01em; }
+        .page-sub { font-size: .68rem; color: var(--muted); margin-top: 1px; }
+        .topbar-right { display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: .73rem; }
+        .host { color: var(--text); font-weight: 540; }
+        .live { display: inline-flex; align-items: center; gap: 6px; color: var(--success); font-size: .65rem; font-weight: 700; letter-spacing: .08em; }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1.8s infinite; }
+        @keyframes pulse { 50% { opacity: .35; transform: scale(.8); } }
+        .content { padding: 22px 24px 30px; max-width: 1500px; margin: 0 auto; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+        .section-title { font-size: 1.08rem; font-weight: 620; }
+        .section-desc { color: var(--muted); font-size: .74rem; margin-top: 3px; }
+        .section-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .card { min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 16px 17px; transition: border-color .18s; }
+        .card:hover { border-color: var(--border-2); }
+        .card.span-2 { grid-column: span 2; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 13px; }
+        .overview-grid .card-header { cursor: grab; user-select: none; }
+        .card-label { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+        .card-icon { width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 6px; background: var(--card-2); font-size: 10px; }
+        .badge { font-size: .64rem; padding: 3px 7px; border-radius: 5px; background: var(--card-2); color: var(--muted); white-space: nowrap; }
+        .value { font-size: 2.2rem; font-weight: 650; line-height: 1; letter-spacing: -.035em; }
+        .unit { font-size: .85rem; color: var(--muted); font-weight: 450; margin-left: 3px; }
+        .sub { color: var(--muted); font-size: .71rem; margin-top: 6px; }
+        .bar { height: 5px; margin: 12px 0 7px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+        .fill { height: 100%; width: 0; border-radius: inherit; transition: width .35s ease; }
+        .fill.cpu { background: var(--cpu); } .fill.mem { background: var(--mem); } .fill.disk { background: var(--disk); } .fill.gpu { background: var(--gpu); } .fill.gpu-mem { background: var(--gpu-accent); }
+        .metrics { margin-top: 8px; }
+        .metric { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 4px 0; }
+        .metric-name { color: var(--muted); font-size: .72rem; }
+        .metric-val { font-size: .77rem; font-weight: 540; font-variant-numeric: tabular-nums; }
+        .core-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 7px; margin-top: 12px; max-height: 132px; overflow-y: auto; padding-right: 4px; }
+        .core { background: var(--card-2); border: 1px solid var(--border); border-radius: 7px; padding: 7px; text-align: center; }
+        .core-name { color: var(--dim); font-size: .58rem; text-transform: uppercase; }
+        .core-value { color: var(--cpu); font-size: .77rem; font-weight: 650; margin-top: 2px; }
+        .gpu-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 375px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--border-2) transparent; }
+        .gpu-grid::-webkit-scrollbar, .core-grid::-webkit-scrollbar, .scroll-area::-webkit-scrollbar { width: 6px; height: 6px; }
+        .gpu-grid::-webkit-scrollbar-track, .core-grid::-webkit-scrollbar-track, .scroll-area::-webkit-scrollbar-track { background: transparent; }
+        .gpu-grid::-webkit-scrollbar-thumb, .core-grid::-webkit-scrollbar-thumb, .scroll-area::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 99px; }
+        .gpu-grid::-webkit-scrollbar-thumb:hover { background: var(--gpu); }
+        .gpu-grid.many-gpu { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .gpu-box { background: var(--card-2); border: 1px solid var(--border); border-radius: 9px; padding: 13px; min-width: 0; }
+        .gpu-box h4 { color: var(--gpu-accent); font-size: .76rem; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .gpu-sect { border-top: 1px solid var(--border); margin-top: 9px; padding-top: 8px; }
+        .gpu-sect-title { color: var(--dim); text-transform: uppercase; font-size: .56rem; font-weight: 700; letter-spacing: .09em; margin-bottom: 5px; }
+        .gpu-mini { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; }
+        .gpu-mini-label { color: var(--dim); font-size: .56rem; text-transform: uppercase; }
+        .gpu-mini-val { color: var(--cpu); font-size: .73rem; font-weight: 600; margin-top: 1px; }
+        .temp { font-size: .68rem; padding: 2px 6px; border-radius: 5px; background: rgba(121,167,104,.13); color: var(--success); }
+        .temp.warn { color: var(--warning); background: rgba(195,161,92,.12); }
+        .temp.hot { color: var(--danger); background: rgba(208,92,92,.12); }
+        .quick-procs { max-height: 250px; overflow-y: auto; }
+        .proc-row { display: grid; grid-template-columns: minmax(0,1fr) 58px 58px; gap: 9px; align-items: center; padding: 6px 2px; border-bottom: 1px solid var(--border); font-size: .71rem; }
+        .proc-row:last-child { border: 0; }
+        .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+        .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .proc-cpu { color: var(--cpu); text-align: right; } .proc-mem { color: var(--mem); text-align: right; }
+        .summary-strip { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+        .summary-box { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 12px 13px; }
+        .summary-label { color: var(--muted); font-size: .62rem; text-transform: uppercase; letter-spacing: .07em; }
+        .summary-value { font-size: 1.03rem; font-weight: 620; margin-top: 3px; }
+        .panel { background: var(--card); border: 1px solid var(--border); border-radius: 11px; overflow: hidden; }
+        .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .search { width: min(330px, 100%); border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 7px; padding: 7px 10px; outline: none; font-size: .73rem; }
+        .search:focus { border-color: var(--border-2); }
+        .btn { border: 1px solid var(--border); background: var(--card-2); color: var(--muted); border-radius: 7px; padding: 6px 9px; cursor: pointer; font-size: .68rem; font-weight: 580; }
+        .btn:hover { color: var(--text); border-color: var(--border-2); }
+        .btn.primary { color: var(--cpu); border-color: rgba(201,169,98,.3); }
+        .btn.danger { color: var(--danger); border-color: rgba(208,92,92,.28); }
+        .btn.success { color: var(--success); border-color: rgba(121,167,104,.28); }
+        .btn:disabled { opacity: .35; cursor: not-allowed; }
+        .table-wrap { overflow: auto; max-height: calc(100vh - 235px); }
+        table { width: 100%; border-collapse: collapse; font-size: .71rem; }
+        th { position: sticky; top: 0; z-index: 2; background: var(--card-2); color: var(--dim); text-transform: uppercase; letter-spacing: .06em; font-size: .59rem; font-weight: 700; text-align: left; padding: 9px 11px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        td { padding: 8px 11px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:last-child td { border-bottom: 0; }
+        tbody tr:hover td { background: var(--row); }
+        .right { text-align: right; }
+        .status { display: inline-flex; align-items: center; gap: 5px; font-size: .66rem; }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
+        .status.active .status-dot { background: var(--success); }
+        .status.failed .status-dot { background: var(--danger); }
+        .status.inactive .status-dot { background: var(--dim); }
+        .actions { display: flex; justify-content: flex-end; gap: 5px; white-space: nowrap; }
+        .notice { margin-bottom: 13px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--muted); font-size: .7rem; }
+        .notice strong { color: var(--text); }
+        .chart-card { height: 300px; padding: 14px 15px; }
+        .chart-wrap { height: 245px; position: relative; }
+        .interface-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 10px; }
+        .interface { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 12px 13px; }
+        .interface-name { font-weight: 650; font-size: .76rem; }
+        .interface-ip { color: var(--cpu); font-size: .68rem; margin-top: 2px; }
+        .interface-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 9px; }
+        .tiny-label { color: var(--dim); font-size: .57rem; text-transform: uppercase; }
+        .tiny-value { font-size: .7rem; margin-top: 1px; }
+        .info-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 11px; }
+        .info-box { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 13px; min-width: 0; }
+        .info-label { color: var(--dim); text-transform: uppercase; letter-spacing: .07em; font-size: .58rem; font-weight: 700; }
+        .info-value { margin-top: 5px; font-size: .76rem; overflow-wrap: anywhere; }
+        .sortable-ghost { opacity: .35; border: 1px dashed var(--cpu); }
+        .loading { color: var(--dim); padding: 14px; font-size: .72rem; }
+        .empty { color: var(--dim); padding: 18px; text-align: center; }
+        .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 80; display: grid; gap: 8px; width: min(360px, calc(100vw - 36px)); }
+        .toast { background: #171c24; border: 1px solid var(--border-2); border-radius: 9px; padding: 10px 12px; font-size: .71rem; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+        .toast.ok { border-color: rgba(121,167,104,.45); } .toast.error { border-color: rgba(208,92,92,.5); color: #e5b4b4; }
+        .overlay { display: none; }
+        @media (max-width: 1000px) {
+            .sidebar { transform: translateX(-100%); transition: transform .2s ease; }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-left: 0; }
+            .menu-btn { display: grid; place-items: center; }
+            .overlay { position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.48); }
+            .overlay.show { display: block; }
+            .info-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+        }
+        @media (max-width: 720px) {
+            .content { padding: 16px 12px 24px; }
+            .topbar { padding: 0 12px; height: 58px; }
+            .topbar-right .host-wrap { display: none; }
             .grid { grid-template-columns: 1fr; }
-            .core-grid { grid-template-columns: repeat(4, 1fr); }
-            .gpu-metric-grid { grid-template-columns: 1fr; }
-            .net-stats { grid-template-columns: 1fr; }
+            .card.span-2 { grid-column: span 1; }
+            .summary-strip { grid-template-columns: repeat(2, minmax(0,1fr)); }
+            .gpu-grid.many-gpu { grid-template-columns: 1fr; }
+            .info-grid { grid-template-columns: 1fr; }
+            .section-head { align-items: flex-start; flex-direction: column; }
+            .table-wrap { max-height: calc(100vh - 250px); }
         }
     </style>
-    <script>
-    // === Load saved order ===
-    let cardOrder = [];
-    try {
-        cardOrder = JSON.parse(localStorage.getItem('dashboard_card_order')) || [];
-    } catch(e) {
-        cardOrder = [];
-    }
-
-    function saveOrder() {
-        const items = document.querySelectorAll('#grid-sortable > .card');
-        const order = [];
-        items.forEach(el => {
-            order.push(el.dataset.cardId || el.querySelector('.card-label').textContent.trim());
-        });
-        try {
-            localStorage.setItem('dashboard_card_order', JSON.stringify(order));
-        } catch(e) {}
-    }
-    </script>
 </head>
 <body>
-<div class="app">
-
-    <header class="header">
-        <div class="header-left">
-            <div class="logo">⚡</div>
-            <div class="header-title">Server Dashboard <span>— GPU Training</span></div>
-        </div>
-        <div class="header-right">
-            <div class="header-info">
-                <strong id="hdr-hostname">—</strong>
-            </div>
-            <div class="header-info">
-                IP: <strong id="hdr-ip">—</strong>
-                <div class="ip-list" id="hdr-ip-list"></div>
-            </div>
-            <div class="live-indicator">
-                <span class="live-dot"></span>
-                LIVE
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <span class="logged-in-as" id="user-display">—</span>
-                <a href="/logout" class="logout-btn">Logout</a>
-            </div>
-        </div>
-    </header>
-
-    <div class="grid" id="grid-sortable">
-
-        <div class="card" data-card-id="cpu">
-            <div class="card-header">
-                <span class="card-label"><span class="card-icon cpu">⚙</span> CPU</span>
-                <span class="card-badge" id="cpu-cores-badge">— cores</span>
-            </div>
-            <div class="value-large">
-                <span id="cpu-total">0</span><span class="value-unit">%</span>
-            </div>
-            <div class="sub-text" id="cpu-freq">— MHz</div>
-            <div class="bar-container">
-                <div class="bar-track">
-                    <div class="bar-fill cpu" id="cpu-bar" style="width:0%"></div>
+<div class="layout">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand"><div class="brand-icon">⚡</div><div><div class="brand-name">Mini Server</div><div class="brand-sub">Monitor & Management</div></div></div>
+        <nav class="nav">
+            <div class="nav-label">Dashboard</div>
+            <button class="nav-item active" data-view="overview"><span class="nav-icon">⌂</span><span class="nav-text">Overview</span></button>
+            <div class="nav-label">Management</div>
+            <button class="nav-item" data-view="services"><span class="nav-icon">◆</span><span class="nav-text">Services</span></button>
+            <button class="nav-item" data-view="processes"><span class="nav-icon">▤</span><span class="nav-text">Processes</span></button>
+            <div class="nav-label">Monitoring</div>
+            <button class="nav-item" data-view="storage"><span class="nav-icon">▣</span><span class="nav-text">Storage</span></button>
+            <button class="nav-item" data-view="network"><span class="nav-icon">↕</span><span class="nav-text">Network</span></button>
+            <button class="nav-item" data-view="gpu"><span class="nav-icon">◈</span><span class="nav-text">GPU</span></button>
+            <div class="nav-label">Server</div>
+            <button class="nav-item" data-view="system"><span class="nav-icon">ⓘ</span><span class="nav-text">System Info</span></button>
+        </nav>
+        <div class="sidebar-footer"><div class="sidebar-user" id="sidebar-user">Signed in: —</div><a class="logout" href="/logout">Logout</a></div>
+    </aside>
+    <div class="overlay" id="overlay"></div>
+    <main class="main">
+        <header class="topbar">
+            <div class="topbar-left"><button class="menu-btn" id="menu-btn" aria-label="Buka menu">☰</button><div><div class="page-title" id="page-title">Overview</div><div class="page-sub" id="page-sub">Live server health and resource usage</div></div></div>
+            <div class="topbar-right"><span class="host-wrap">Host: <span class="host" id="hdr-hostname">—</span></span><span class="live"><span class="live-dot"></span> LIVE</span></div>
+        </header>
+        <div class="content">
+            <section class="view active" id="view-overview">
+                <div class="summary-strip">
+                    <div class="summary-box"><div class="summary-label">CPU</div><div class="summary-value"><span id="sum-cpu">0</span>%</div></div>
+                    <div class="summary-box"><div class="summary-label">Memory</div><div class="summary-value"><span id="sum-mem">0</span>%</div></div>
+                    <div class="summary-box"><div class="summary-label">Disk</div><div class="summary-value"><span id="sum-disk">0</span>%</div></div>
+                    <div class="summary-box"><div class="summary-label">Uptime</div><div class="summary-value" id="sum-uptime">—</div></div>
                 </div>
-                <span class="bar-label" id="cpu-bar-label">0%</span>
-            </div>
-            <div class="core-grid" id="core-grid"></div>
-        </div>
-
-        <div class="card" data-card-id="mem">
-            <div class="card-header">
-                <span class="card-label"><span class="card-icon mem">🧠</span> Memory</span>
-                <span class="card-badge">RAM</span>
-            </div>
-            <div class="value-large">
-                <span id="mem-pct">0</span><span class="value-unit">%</span>
-            </div>
-            <div class="sub-text" id="mem-used">—</div>
-            <div class="bar-container">
-                <div class="bar-track">
-                    <div class="bar-fill mem" id="mem-bar" style="width:0%"></div>
+                <div class="grid overview-grid" id="grid-sortable">
+                    <div class="card" data-card-id="cpu"><div class="card-header"><span class="card-label"><span class="card-icon">⚙</span> CPU</span><span class="badge" id="cpu-badge">— cores</span></div><div class="value"><span id="cpu-total">0</span><span class="unit">%</span></div><div class="sub" id="cpu-freq">— MHz</div><div class="bar"><div class="fill cpu" id="cpu-bar"></div></div><div class="core-grid" id="core-grid"></div></div>
+                    <div class="card" data-card-id="memory"><div class="card-header"><span class="card-label"><span class="card-icon">◫</span> Memory</span><span class="badge">RAM</span></div><div class="value"><span id="mem-pct">0</span><span class="unit">%</span></div><div class="sub" id="mem-used">—</div><div class="bar"><div class="fill mem" id="mem-bar"></div></div><div class="metrics"><div class="metric"><span class="metric-name">Total</span><span class="metric-val" id="mem-total">—</span></div><div class="metric"><span class="metric-name">Available</span><span class="metric-val" id="mem-avail">—</span></div></div></div>
+                    <div class="card" data-card-id="disk"><div class="card-header"><span class="card-label"><span class="card-icon">▣</span> Root Disk</span><span class="badge" id="disk-badge">— mounts</span></div><div class="value"><span id="disk-pct">0</span><span class="unit">%</span></div><div class="sub" id="disk-used">—</div><div class="bar"><div class="fill disk" id="disk-bar"></div></div><div class="metrics"><div class="metric"><span class="metric-name">Total</span><span class="metric-val" id="disk-total">—</span></div><div class="metric"><span class="metric-name">Available</span><span class="metric-val" id="disk-free">—</span></div></div></div>
+                    <div class="card" data-card-id="gpu"><div class="card-header"><span class="card-label"><span class="card-icon">◈</span> GPU</span><span class="badge" id="gpu-badge">—</span></div><div class="gpu-grid" id="gpu-grid-overview"><div class="loading">Loading GPU...</div></div></div>
+                    <div class="card span-2" data-card-id="processes"><div class="card-header"><span class="card-label"><span class="card-icon">▤</span> Top Processes</span><span class="badge">CPU + MEM</span></div><div class="quick-procs scroll-area" id="quick-procs"><div class="loading">Loading processes...</div></div></div>
                 </div>
-                <span class="bar-label" id="mem-bar-label">0%</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Total</span>
-                <span class="metric-value" id="mem-total">—</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Available</span>
-                <span class="metric-value" id="mem-avail">—</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Used</span>
-                <span class="metric-value" id="mem-used2">—</span>
-            </div>
+            </section>
+            <section class="view" id="view-services">
+                <div class="section-head"><div><div class="section-title">Services</div><div class="section-desc">Inspect systemd services and control explicitly allowed units.</div></div><div class="section-actions"><button class="btn" id="services-refresh">↻ Refresh</button></div></div>
+                <div class="notice" id="services-notice"><strong>Controlled mode:</strong> service actions are only enabled for units listed in <span class="mono">DASHBOARD_MANAGED_SERVICES</span>.</div>
+                <div class="panel"><div class="toolbar"><input class="search" id="services-search" placeholder="Cari service, status, deskripsi..."><span class="badge" id="services-count">—</span></div><div class="table-wrap scroll-area"><table><thead><tr><th>Service</th><th>Status</th><th>Substate</th><th>Description</th><th class="right">Actions</th></tr></thead><tbody id="services-body"><tr><td colspan="5" class="loading">Buka menu Services untuk memuat data.</td></tr></tbody></table></div></div>
+            </section>
+            <section class="view" id="view-processes">
+                <div class="section-head"><div><div class="section-title">Processes</div><div class="section-desc">Live process inventory with safe same-user termination.</div></div><div class="section-actions"><button class="btn" id="processes-refresh">↻ Refresh</button></div></div>
+                <div class="notice"><strong>Protection:</strong> PID 1, dashboard process, and processes owned by other OS users cannot be terminated.</div>
+                <div class="panel"><div class="toolbar"><input class="search" id="processes-search" placeholder="Cari PID, nama, user, command..."><span class="badge" id="processes-count">—</span></div><div class="table-wrap scroll-area"><table><thead><tr><th>PID</th><th>Process</th><th>User</th><th>Status</th><th class="right">CPU</th><th class="right">Memory</th><th>Command</th><th class="right">Action</th></tr></thead><tbody id="processes-body"><tr><td colspan="8" class="loading">Buka menu Processes untuk memuat data.</td></tr></tbody></table></div></div>
+            </section>
+            <section class="view" id="view-storage"><div class="section-head"><div><div class="section-title">Storage</div><div class="section-desc">Mounted filesystems and capacity usage.</div></div></div><div class="panel"><div class="table-wrap scroll-area"><table><thead><tr><th>Filesystem</th><th>Type</th><th>Mounted on</th><th class="right">Size</th><th class="right">Used</th><th class="right">Avail</th><th class="right">Use%</th></tr></thead><tbody id="storage-body"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody></table></div></div></section>
+            <section class="view" id="view-network">
+                <div class="section-head"><div><div class="section-title">Network</div><div class="section-desc">Real-time throughput plus per-interface counters.</div></div></div>
+                <div class="summary-strip"><div class="summary-box"><div class="summary-label">Upload total</div><div class="summary-value" id="net-up-total">—</div></div><div class="summary-box"><div class="summary-label">Download total</div><div class="summary-value" id="net-down-total">—</div></div><div class="summary-box"><div class="summary-label">Packets out</div><div class="summary-value" id="net-pkt-out">—</div></div><div class="summary-box"><div class="summary-label">Packets in</div><div class="summary-value" id="net-pkt-in">—</div></div></div>
+                <div class="card chart-card"><div class="chart-wrap"><canvas id="net-chart"></canvas></div></div><div style="height:12px"></div><div class="interface-grid" id="interface-grid"></div>
+            </section>
+            <section class="view" id="view-gpu"><div class="section-head"><div><div class="section-title">GPU</div><div class="section-desc">NVIDIA utilization, clocks, power and VRAM.</div></div></div><div class="card"><div class="gpu-grid" id="gpu-grid-detail"><div class="loading">Loading GPU...</div></div></div></section>
+            <section class="view" id="view-system"><div class="section-head"><div><div class="section-title">System Info</div><div class="section-desc">Runtime, kernel, architecture and dashboard management capabilities.</div></div></div><div class="info-grid" id="system-info"></div></section>
         </div>
-
-        <div class="card" data-card-id="disk">
-            <div class="card-header">
-                <span class="card-label"><span class="card-icon disk">💾</span> Disk</span>
-                <span class="card-badge" id="disk-count-badge">—</span>
-            </div>
-            <div class="value-large">
-                <span id="disk-pct">0</span><span class="value-unit">%</span>
-            </div>
-            <div class="sub-text" id="disk-used">—</div>
-            <div class="bar-container">
-                <div class="bar-track">
-                    <div class="bar-fill disk" id="disk-bar" style="width:0%"></div>
-                </div>
-                <span class="bar-label" id="disk-bar-label">0%</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Total</span>
-                <span class="metric-value" id="disk-total">—</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Free</span>
-                <span class="metric-value" id="disk-free">—</span>
-            </div>
-            <div class="disk-table-wrap">
-            <table class="disk-table" id="disk-table">
-                <thead>
-                    <tr>
-                        <th>Filesystem</th>
-                        <th style="text-align:right">Size</th>
-                        <th style="text-align:right">Used</th>
-                        <th style="text-align:right">Avail</th>
-                        <th style="text-align:right">Use%</th>
-                        <th>Mounted on</th>
-                    </tr>
-                </thead>
-                <tbody id="disk-tbody">
-                    <tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:12px;">Loading...</td></tr>
-                </tbody>
-            </table>
-            </div>
-        </div>
-
-        <div class="card" data-card-id="gpu">
-            <div class="card-header">
-                <span class="card-label"><span class="card-icon gpu">🎮</span> GPU</span>
-                <span class="card-badge" id="gpu-count-badge">—</span>
-            </div>
-            <div class="gpu-grid" id="gpu-grid">
-                <div style="color:var(--text-dim); font-size:0.78rem; padding:8px 0;">Loading...</div>
-            </div>
-        </div>
-
-        <div class="card" data-card-id="net">
-            <div class="card-header">
-                <span class="card-label"><span class="card-icon net">🌐</span> Network I/O</span>
-                <span class="card-badge">real-time</span>
-            </div>
-            <div class="chart-wrap" id="chart-wrap">
-                <canvas id="netChart"></canvas>
-            </div>
-            <div class="net-stats">
-                <div class="net-stat">
-                    <div class="net-stat-label">Upload (total)</div>
-                    <div class="net-stat-value up" id="net-upload-total">—</div>
-                </div>
-                <div class="net-stat">
-                    <div class="net-stat-label">Download (total)</div>
-                    <div class="net-stat-value down" id="net-download-total">—</div>
-                </div>
-                <div class="net-stat">
-                    <div class="net-stat-label">Packets Out</div>
-                    <div class="net-stat-value" id="net-pkt-out" style="color:var(--net-up-color)">—</div>
-                </div>
-                <div class="net-stat">
-                    <div class="net-stat-label">Packets In</div>
-                    <div class="net-stat-value" id="net-pkt-in" style="color:var(--net-down-color)">—</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" data-card-id="proc">
-            <div class="card-header">
-                <span class="card-label"><span class="card-icon proc">📊</span> Top Processes</span>
-                <span class="card-badge">CPU + MEM</span>
-            </div>
-            <div class="proc-list" id="proc-list">
-                <div style="color:var(--text-dim); font-size:0.78rem; padding:8px 0;">Loading...</div>
-            </div>
-        </div>
-
-    </div>
-
-    <div class="footer">
-        <strong>Dashboard Server</strong> · refresh setiap 2 detik · <span id="footer-time">—</span>
-    </div>
-
+    </main>
 </div>
-
+<div class="toast-stack" id="toasts"></div>
 <script>
-function fmtBytesDF(b) {
-    // Format persis seperti df -h: GB/MB/KB tanpa spasi, misal "915G", "78G", "791G"
-    if (b >= 1024*1024*1024*1024) {
-        const tb = b / (1024*1024*1024*1024);
-        return (tb >= 10 ? tb.toFixed(0) : tb.toFixed(1)) + 'T';
-    }
-    if (b >= 1024*1024*1024) {
-        const gb = b / (1024*1024*1024);
-        return (gb >= 10 ? gb.toFixed(0) : gb.toFixed(1)) + 'G';
-    }
-    if (b >= 1024*1024) {
-        const mb = b / (1024*1024);
-        return (mb >= 10 ? mb.toFixed(0) : mb.toFixed(1)) + 'M';
-    }
-    if (b >= 1024) {
-        const kb = b / 1024;
-        return (kb >= 10 ? kb.toFixed(0) : kb.toFixed(1)) + 'K';
-    }
-    return b.toFixed(0) + 'K';
-}
-
-function fmtRate(b) {
-    if (b < 1024) return b.toFixed(0) + ' B/s';
-    if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB/s';
-    return (b/(1024*1024)).toFixed(1) + ' MB/s';
-}
-
-const chartHist = { labels: [], up: [], down: [] };
-const MAXP = 40;
+const CSRF_TOKEN = {{ csrf_token|tojson }};
+let latestData = null;
+let serviceRows = [];
+let processRows = [];
 let netChart = null;
-let lastSent = 0, lastRecv = 0, lastT = 0;
-
-function initNetChart() {
-    const ctx = document.getElementById('netChart').getContext('2d');
-    netChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [
-                {
-                    label: '↑ Upload',
-                    data: [],
-                    borderColor: '#d98a44',
-                    backgroundColor: 'rgba(217,138,68,0.08)',
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    borderWidth: 2
-                },
-                {
-                    label: '↓ Download',
-                    data: [],
-                    borderColor: '#7a8fa6',
-                    backgroundColor: 'rgba(122,143,166,0.08)',
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    borderWidth: 2
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 200 },
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-                legend: {
-                    labels: { color: '#7a7670', font: { size: 10 }, boxWidth: 12, padding: 8 }
-                },
-                tooltip: {
-                    backgroundColor: '#141820',
-                    titleColor: '#e8e6e1',
-                    bodyColor: '#7a7670',
-                    borderColor: '#1e2530',
-                    borderWidth: 1,
-                    padding: 8,
-                    callbacks: {
-                        label: ctx => ctx.dataset.label + ': ' + fmtRate(ctx.parsed.y)
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    display: true,
-                    grid: { color: '#1a1f28', drawBorder: false },
-                    ticks: { color: '#555250', maxTicksLimit: 8, font: { size: 9 } }
-                },
-                y: {
-                    display: true,
-                    grid: { color: '#1a1f28', drawBorder: false },
-                    ticks: {
-                        color: '#555250',
-                        font: { size: 9 },
-                        callback: v => fmtRate(v)
-                    },
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-    chartHist.labels = [];
-    chartHist.up = [];
-    chartHist.down = [];
-    lastSent = 0; lastRecv = 0; lastT = 0;
-}
-
-function updateNetChart(sent, recv, ts) {
-    if (!netChart) return;
-    const now = ts || Date.now();
-    const dt = now - lastT;
-    const dUp = sent - lastSent;
-    const dDown = recv - lastRecv;
-    const upRate = (dt > 0 && dUp > 0) ? (dUp / dt) * 1000 : 0;
-    const downRate = (dt > 0 && dDown > 0) ? (dDown / dt) * 1000 : 0;
-
-    chartHist.labels.push(new Date(now).toLocaleTimeString());
-    chartHist.up.push(upRate);
-    chartHist.down.push(downRate);
-
-    if (chartHist.labels.length > MAXP) {
-        chartHist.labels.shift();
-        chartHist.up.shift();
-        chartHist.down.shift();
-    }
-
-    netChart.data.labels = chartHist.labels;
-    netChart.data.datasets[0].data = chartHist.up;
-    netChart.data.datasets[1].data = chartHist.down;
-    netChart.update('none');
-
-    lastSent = sent;
-    lastRecv = recv;
-    lastT = now;
-}
-
-function renderCores(perCpu, count) {
-    const grid = document.getElementById('core-grid');
-    grid.innerHTML = '';
-    for (let i = 0; i < count; i++) {
-        const pct = perCpu[i] !== undefined ? perCpu[i] : 0;
-        const cell = document.createElement('div');
-        cell.className = 'core-cell';
-        cell.innerHTML = `
-            <div class="core-label">Core ${i}</div>
-            <div class="core-value">${pct.toFixed(1)}%</div>
-            <div class="core-bar"><div class="core-bar-fill" style="width:${pct}%"></div></div>
-        `;
-        grid.appendChild(cell);
-    }
-}
-
-function renderGPUs(gpus) {
-    const grid = document.getElementById('gpu-grid');
-    grid.innerHTML = '';
-    if (!gpus || gpus.length === 0) {
-        grid.innerHTML = '<div style="color:var(--text-dim); font-size:0.78rem; padding:8px 0;">Tidak ada GPU detected</div>';
-        document.getElementById('gpu-count-badge').textContent = '0';
-        return;
-    }
-    document.getElementById('gpu-count-badge').textContent = gpus.length + ' GPU';
-
-    // Jika hanya 1 GPU, full width; jika banyak, grid 2 kolom
-    if (gpus.length === 1) {
-        grid.classList.add('single-gpu');
-    } else {
-        grid.classList.remove('single-gpu');
-        grid.classList.add('many-gpu');
-    }
-
-    gpus.forEach(g => {
-        const load = g.load !== null && g.load !== undefined ? g.load.toFixed(1) : '—';
-        const memUtil = g.mem_util !== null && g.mem_util !== undefined ? g.mem_util.toFixed(1) : '—';
-        const temp = g.temperature !== null && g.temperature !== undefined ? g.temperature : 0;
-        let tempCls = 'ok';
-        if (temp > 85) tempCls = 'hot';
-        else if (temp > 70) tempCls = 'warn';
-
-        const smClock = g.sm_clock !== null && g.sm_clock !== undefined ? Math.round(g.sm_clock) : '—';
-        const memClock = g.mem_clock !== null && g.mem_clock !== undefined ? Math.round(g.mem_clock) : '—';
-        const gfxClock = g.graphics_clock !== null && g.graphics_clock !== undefined ? Math.round(g.graphics_clock) : '—';
-        const powerDraw = g.power_draw !== null && g.power_draw !== undefined ? g.power_draw.toFixed(1) : '—';
-        const powerLimit = g.power_limit !== null && g.power_limit !== undefined ? g.power_limit.toFixed(0) : '—';
-        const powerPct = (g.power_draw !== null && g.power_limit && g.power_limit > 0 && g.power_draw !== null)
-            ? (g.power_draw / g.power_limit * 100).toFixed(1) : '—';
-
-        const memTotal = g.memoryTotal !== null && g.memoryTotal !== undefined ? g.memoryTotal : 0;
-        const memUsed = g.memoryUsed !== null && g.memoryUsed !== undefined ? g.memoryUsed : 0;
-        const memFree = g.memoryFree !== null && g.memoryFree !== undefined ? g.memoryFree : 0;
-
-        const box = document.createElement('div');
-        box.className = 'gpu-box' + (gpus.length === 1 ? ' full-width' : '');
-        box.innerHTML = `
-            <h4><span class="card-icon gpu" style="width:16px;height:16px;font-size:9px;">🎮</span> GPU ${g.id}: ${g.name}</h4>
-
-            <div class="metric-row">
-                <span class="metric-label">Load GPU</span>
-                <span class="metric-value util">${load}%</span>
-            </div>
-            <div class="bar-container">
-                <div class="bar-track"><div class="bar-fill gpu-load" style="width:${load}%;background:var(--gpu-color)"></div></div>
-            </div>
-
-            <div class="metric-row">
-                <span class="metric-label">Load Mem</span>
-                <span class="metric-value util">${memUtil}%</span>
-            </div>
-            <div class="bar-container">
-                <div class="bar-track"><div class="bar-fill gpu-mem" style="width:${memUtil}%;background:var(--gpu-accent)"></div></div>
-            </div>
-
-            <div class="metric-row">
-                <span class="metric-label">Temperature</span>
-                <span class="metric-value"><span class="gpu-temp ${tempCls}">${temp}°C</span></span>
-            </div>
-
-            <div class="gpu-section">
-                <div class="gpu-section-title">Clock Speeds (MHz)</div>
-                <div class="gpu-metric-grid">
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">SM / Core</div>
-                        <div class="gpu-metric-value clock">${smClock}</div>
-                    </div>
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">Memory</div>
-                        <div class="gpu-metric-value clock">${memClock}</div>
-                    </div>
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">Graphics</div>
-                        <div class="gpu-metric-value clock">${gfxClock}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="gpu-section">
-                <div class="gpu-section-title">Power</div>
-                <div class="gpu-metric-grid">
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">Draw</div>
-                        <div class="gpu-metric-value power">${powerDraw} W</div>
-                    </div>
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">Limit</div>
-                        <div class="gpu-metric-value power">${powerLimit} W</div>
-                    </div>
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">Usage</div>
-                        <div class="gpu-metric-value power">${powerPct}%</div>
-                    </div>
-                </div>
-                <div class="bar-container" style="margin-top:6px;">
-                    <div class="bar-track"><div class="bar-fill power" style="width:${powerPct}%;background:var(--power-color)"></div></div>
-                </div>
-            </div>
-
-            <div class="gpu-section">
-                <div class="gpu-section-title">Memory (VRAM)</div>
-                <div class="gpu-metric-grid">
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">Total</div>
-                        <div class="gpu-metric-value">${fmtBytes(memTotal * 1024 * 1024)}</div>
-                    </div>
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">Used</div>
-                        <div class="gpu-metric-value">${fmtBytes(memUsed * 1024 * 1024)}</div>
-                    </div>
-                    <div class="gpu-metric-item">
-                        <div class="gpu-metric-label">Free</div>
-                        <div class="gpu-metric-value">${fmtBytes(memFree * 1024 * 1024)}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="metric-row" style="margin-top:8px;">
-                <span class="metric-label">Source</span>
-                <span class="metric-value" style="font-size:0.68rem;color:var(--text-dim)">${g.source || '—'}</span>
-            </div>
-        `;
-        grid.appendChild(box);
-    });
-}
-
-function renderDisks(disks, defaultDisk) {
-    const tbody = document.getElementById('disk-tbody');
-    tbody.innerHTML = '';
-    if (!disks || disks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:12px;">Tidak ada data disk</td></tr>';
-        document.getElementById('disk-count-badge').textContent = '0';
-        return;
-    }
-
-    document.getElementById('disk-count-badge').textContent = disks.length + ' mount';
-    disks.forEach(d => {
-        const pct = d.percent;
-        const pctCls = pct > 90 ? 'high' : '';
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><span class="disk-fstype">${d.filesystem || d.device}</span></td>
-            <td style="text-align:right">${fmtBytesDF(d.total)}</td>
-            <td style="text-align:right">${fmtBytesDF(d.used)}</td>
-            <td style="text-align:right">${fmtBytesDF(d.available)}</td>
-            <td style="text-align:right"><span class="disk-pct ${pctCls}">${pct.toFixed(1)}%</span></td>
-            <td><span class="disk-mount">${d.mountpoint}</span></td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
-function renderProcs(procs) {
-    const list = document.getElementById('proc-list');
-    list.innerHTML = '';
-    if (!procs || procs.length === 0) {
-        list.innerHTML = '<div style="color:var(--text-dim); font-size:0.78rem; padding:8px 0;">Tidak ada proses aktif</div>';
-        return;
-    }
-    procs.forEach(p => {
-        const cpu = p.cpu_percent || 0;
-        const mem = p.memory_percent || 0;
-        const item = document.createElement('div');
-        item.className = 'proc-item';
-        item.innerHTML = `
-            <span class="proc-name" title="${p.name}">${p.name || '?'}</span>
-            <span class="proc-cpu ${cpu > 50 ? 'high' : ''}">${cpu.toFixed(1)}%</span>
-            <span class="proc-mem ${mem > 10 ? 'high' : ''}">${mem.toFixed(1)}%</span>
-        `;
-        list.appendChild(item);
-    });
-}
-
-function update() {
-    fetch('/data')
-        .then(r => r.json())
-        .then(d => {
-            document.getElementById('hdr-hostname').textContent = d.hostname || '—';
-            const ips = d.ips || [];
-            const mainIP = ips.find(i => !i.interface.includes('lo')) || ips[0];
-            document.getElementById('hdr-ip').textContent = mainIP ? mainIP.ip : '—';
-            const ipList = document.getElementById('hdr-ip-list');
-            ipList.innerHTML = ips.map(ip =>
-                `<span class="ip-chip"><span class="iface">${ip.interface}</span><span class="addr">${ip.ip}</span></span>`
-            ).join('');
-
-            const cpuPct = d.cpu.percent;
-            document.getElementById('cpu-total').textContent = cpuPct.toFixed(1);
-            document.getElementById('cpu-bar').style.width = cpuPct + '%';
-            document.getElementById('cpu-bar-label').textContent = cpuPct.toFixed(1) + '%';
-            document.getElementById('cpu-freq').textContent = d.cpu.frequency ? d.cpu.frequency.toFixed(0) + ' MHz' : '—';
-            document.getElementById('cpu-cores-badge').textContent = (d.cpu.count || 0) + ' cores';
-
-            if (d.cpu.per_cpu && d.cpu.per_cpu.length > 0) {
-                renderCores(d.cpu.per_cpu, d.cpu.count || d.cpu.per_cpu.length);
-            } else {
-                document.getElementById('core-grid').innerHTML = '<div style="color:var(--text-dim);font-size:0.72rem;">Tidak ada data per-core</div>';
-            }
-
-            const memPct = d.memory.percent;
-            document.getElementById('mem-pct').textContent = memPct.toFixed(1);
-            document.getElementById('mem-bar').style.width = memPct + '%';
-            document.getElementById('mem-bar-label').textContent = memPct.toFixed(1) + '%';
-            document.getElementById('mem-used').textContent = fmtBytes(d.memory.used) + ' used';
-            document.getElementById('mem-total').textContent = fmtBytes(d.memory.total);
-            document.getElementById('mem-avail').textContent = fmtBytes(d.memory.available);
-            document.getElementById('mem-used2').textContent = fmtBytes(d.memory.used);
-
-            // Disk detail
-            renderDisks(d.disks, d.disk_default);
-
-            renderGPUs(d.gpus);
-
-            document.getElementById('net-upload-total').textContent = fmtBytes(d.net_io.bytes_sent);
-            document.getElementById('net-download-total').textContent = fmtBytes(d.net_io.bytes_recv);
-            document.getElementById('net-pkt-out').textContent = d.net_io.packets_sent.toLocaleString();
-            document.getElementById('net-pkt-in').textContent = d.net_io.packets_recv.toLocaleString();
-            updateNetChart(d.net_io.bytes_sent, d.net_io.bytes_recv, d.timestamp * 1000);
-
-            renderProcs(d.processes);
-            document.getElementById('footer-time').textContent = new Date(d.timestamp * 1000).toLocaleString();
-            document.getElementById('user-display').textContent = '👤 ' + (d.user ? d.user : '—');
-        })
-        .catch(e => console.error('fetch error', e));
-}
-
-initNetChart();
-setInterval(update, 2000);
-update();
-
-// === Init SortableJS for card drag-drop with persistence ===
-(function initSortable() {
-    const grid = document.getElementById('grid-sortable');
-    if (!grid || typeof Sortable === 'undefined') return;
-
-    Sortable.create(grid, {
-        animation: 200,
-        handle: '.card-header',
-        ghostClass: 'sortable-ghost',
-        dragClass: 'sortable-drag',
-        onEnd: function(evt) {
-            saveOrder();
-        }
-    });
-
-    // If saved order exists, apply it
-    if (cardOrder.length > 0) {
-        const cards = grid.querySelectorAll('.card');
-        cardOrder.forEach(id => {
-            const el = grid.querySelector(`.card[data-card-id="${id}"]`);
-            if (el) grid.appendChild(el);
-        });
-    }
-})();
+let lastNet = null;
+const chartHistory = {labels: [], up: [], down: []};
+const PAGE_META = {
+    overview: ['Overview', 'Live server health and resource usage'],
+    services: ['Services', 'Systemd status and controlled actions'],
+    processes: ['Processes', 'Inspect and manage user processes'],
+    storage: ['Storage', 'Filesystem capacity and mounts'],
+    network: ['Network', 'Traffic and interface counters'],
+    gpu: ['GPU', 'Accelerator utilization and telemetry'],
+    system: ['System Info', 'Operating system and runtime details']
+};
+function byId(id) { return document.getElementById(id); }
+function esc(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function num(value, fallback=0) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
+function fmtBytes(bytes, digits=1) { const b = num(bytes, 0); if (b <= 0) return b === 0 ? '0 B' : '—'; const units = ['B','KB','MB','GB','TB','PB']; const i = Math.min(Math.floor(Math.log(b)/Math.log(1024)), units.length-1); return (b/Math.pow(1024,i)).toFixed(digits) + ' ' + units[i]; }
+function fmtBytesDF(bytes) { const b = num(bytes, 0); const units = ['B','K','M','G','T','P']; let value=b; let i=0; while (value >= 1024 && i < units.length-1) { value/=1024; i++; } return (value >= 10 || i === 0 ? value.toFixed(0) : value.toFixed(1)) + units[i]; }
+function fmtRate(bytes) { return fmtBytes(bytes) + '/s'; }
+function fmtDuration(seconds) { let s = Math.max(0, Math.floor(num(seconds))); const d=Math.floor(s/86400); s%=86400; const h=Math.floor(s/3600); s%=3600; const m=Math.floor(s/60); if (d) return `${d}d ${h}h`; if (h) return `${h}h ${m}m`; return `${m}m`; }
+function toast(message, type='ok') { const el=document.createElement('div'); el.className='toast '+type; el.textContent=message; byId('toasts').appendChild(el); setTimeout(()=>el.remove(), 4200); }
+async function api(url, options={}) { const opts={...options, headers:{...(options.headers||{})}}; if ((opts.method||'GET').toUpperCase() !== 'GET') opts.headers['X-CSRF-Token']=CSRF_TOKEN; const res=await fetch(url, opts); let payload={}; try { payload=await res.json(); } catch (_) {} if (!res.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${res.status}`); return payload; }
+function setView(name, updateHash=true) { if (!PAGE_META[name]) name='overview'; document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id===`view-${name}`)); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===name)); byId('page-title').textContent=PAGE_META[name][0]; byId('page-sub').textContent=PAGE_META[name][1]; if (updateHash) history.replaceState(null,'','#'+name); closeSidebar(); if (name==='services') loadServices(); if (name==='processes') loadProcesses(); if (name==='network' && netChart) setTimeout(()=>netChart.resize(), 30); }
+function openSidebar(){ byId('sidebar').classList.add('open'); byId('overlay').classList.add('show'); }
+function closeSidebar(){ byId('sidebar').classList.remove('open'); byId('overlay').classList.remove('show'); }
+document.querySelectorAll('.nav-item').forEach(btn=>btn.addEventListener('click',()=>setView(btn.dataset.view)));
+byId('menu-btn').addEventListener('click', openSidebar); byId('overlay').addEventListener('click', closeSidebar);
+function renderCores(values, count) { const grid=byId('core-grid'); grid.innerHTML=''; const n=Math.max(count||0, values?.length||0); for(let i=0;i<n;i++){ const p=num(values?.[i]); grid.insertAdjacentHTML('beforeend', `<div class="core"><div class="core-name">Core ${i}</div><div class="core-value">${p.toFixed(1)}%</div></div>`); } }
+function gpuMarkup(gpus) { if (!Array.isArray(gpus) || !gpus.length) return '<div class="empty">Tidak ada GPU terdeteksi.</div>'; return gpus.map(g=>{ const load=num(g.load), memUtil=num(g.mem_util), temp=num(g.temperature); const tempClass=temp>85?'hot':temp>70?'warn':''; const mt=num(g.memoryTotal), mu=num(g.memoryUsed), mf=num(g.memoryFree); const power=num(g.power_draw), limit=num(g.power_limit); const powerPct=limit>0?power/limit*100:0; return `<div class="gpu-box"><h4>GPU ${esc(g.id)} · ${esc(g.name)}</h4><div class="metric"><span class="metric-name">GPU Load</span><span class="metric-val">${g.load == null?'—':load.toFixed(1)+'%'}</span></div><div class="bar"><div class="fill gpu" style="width:${Math.min(100,load)}%"></div></div><div class="metric"><span class="metric-name">Memory Load</span><span class="metric-val">${g.mem_util == null?'—':memUtil.toFixed(1)+'%'}</span></div><div class="bar"><div class="fill gpu-mem" style="width:${Math.min(100,memUtil)}%"></div></div><div class="metric"><span class="metric-name">Temperature</span><span class="temp ${tempClass}">${g.temperature == null?'—':temp.toFixed(0)+'°C'}</span></div><div class="gpu-sect"><div class="gpu-sect-title">Clock MHz</div><div class="gpu-mini"><div><div class="gpu-mini-label">SM</div><div class="gpu-mini-val">${g.sm_clock == null?'—':Math.round(g.sm_clock)}</div></div><div><div class="gpu-mini-label">Memory</div><div class="gpu-mini-val">${g.mem_clock == null?'—':Math.round(g.mem_clock)}</div></div><div><div class="gpu-mini-label">Graphics</div><div class="gpu-mini-val">${g.graphics_clock == null?'—':Math.round(g.graphics_clock)}</div></div></div></div><div class="gpu-sect"><div class="gpu-sect-title">Power</div><div class="gpu-mini"><div><div class="gpu-mini-label">Draw</div><div class="gpu-mini-val">${g.power_draw == null?'—':power.toFixed(1)+' W'}</div></div><div><div class="gpu-mini-label">Limit</div><div class="gpu-mini-val">${g.power_limit == null?'—':limit.toFixed(0)+' W'}</div></div><div><div class="gpu-mini-label">Usage</div><div class="gpu-mini-val">${g.power_limit == null?'—':powerPct.toFixed(1)+'%'}</div></div></div></div><div class="gpu-sect"><div class="gpu-sect-title">VRAM</div><div class="gpu-mini"><div><div class="gpu-mini-label">Total</div><div class="gpu-mini-val">${mt?fmtBytes(mt*1048576):'—'}</div></div><div><div class="gpu-mini-label">Used</div><div class="gpu-mini-val">${mu?fmtBytes(mu*1048576):'0 B'}</div></div><div><div class="gpu-mini-label">Free</div><div class="gpu-mini-val">${mf?fmtBytes(mf*1048576):'—'}</div></div></div></div><div class="sub">source: ${esc(g.source||'—')}</div></div>`; }).join(''); }
+function renderGPUs(gpus) { const html=gpuMarkup(gpus); ['gpu-grid-overview','gpu-grid-detail'].forEach(id=>{ const el=byId(id); el.classList.toggle('many-gpu', (gpus?.length||0)>1); el.innerHTML=html; }); byId('gpu-badge').textContent=(gpus?.length||0)+' GPU'; }
+function renderQuickProcesses(procs) { const root=byId('quick-procs'); if(!procs?.length){root.innerHTML='<div class="empty">Tidak ada proses aktif.</div>'; return;} root.innerHTML=procs.map(p=>`<div class="proc-row"><span class="mono ellipsis" title="${esc(p.name)}">${esc(p.name||'?')}</span><span class="proc-cpu">${num(p.cpu_percent).toFixed(1)}%</span><span class="proc-mem">${num(p.memory_percent).toFixed(1)}%</span></div>`).join(''); }
+function renderStorage(disks) { const body=byId('storage-body'); if(!disks?.length){body.innerHTML='<tr><td colspan="7" class="empty">Tidak ada filesystem.</td></tr>'; return;} body.innerHTML=disks.map(d=>`<tr><td class="mono">${esc(d.device||d.filesystem)}</td><td>${esc(d.fstype||'—')}</td><td class="mono">${esc(d.mountpoint)}</td><td class="right">${fmtBytesDF(d.total)}</td><td class="right">${fmtBytesDF(d.used)}</td><td class="right">${fmtBytesDF(d.available)}</td><td class="right" style="color:${num(d.percent)>90?'var(--danger)':'var(--disk)'}">${num(d.percent).toFixed(1)}%</td></tr>`).join(''); }
+function renderInterfaces(netMap, ips) { const ipBy={}; (ips||[]).forEach(x=>{(ipBy[x.interface] ||= []).push(x.ip)}); const root=byId('interface-grid'); const entries=Object.entries(netMap||{}); if(!entries.length){root.innerHTML='<div class="empty">Tidak ada interface data.</div>';return;} root.innerHTML=entries.map(([name,n])=>`<div class="interface"><div class="interface-name">${esc(name)}</div><div class="interface-ip mono">${esc((ipBy[name]||[]).join(', ')||'no IPv4')}</div><div class="interface-stats"><div><div class="tiny-label">TX</div><div class="tiny-value">${fmtBytes(n.bytes_sent)}</div></div><div><div class="tiny-label">RX</div><div class="tiny-value">${fmtBytes(n.bytes_recv)}</div></div><div><div class="tiny-label">Packets TX</div><div class="tiny-value">${num(n.packets_sent).toLocaleString()}</div></div><div><div class="tiny-label">Packets RX</div><div class="tiny-value">${num(n.packets_recv).toLocaleString()}</div></div><div><div class="tiny-label">Errors</div><div class="tiny-value">${num(n.errin)+num(n.errout)}</div></div><div><div class="tiny-label">Drops</div><div class="tiny-value">${num(n.dropin)+num(n.dropout)}</div></div></div></div>`).join(''); }
+function renderSystem(info) { if(!info) return; const load=info.load_average||[]; const managed=(info.managed_services||[]).join(', ')||'none (read-only services)'; const fields=[['OS', `${info.system||'—'} ${info.release||''}`], ['Platform', info.platform||'—'], ['Architecture', info.machine||'—'], ['Python', info.python||'—'], ['Boot time', info.boot_time?new Date(info.boot_time*1000).toLocaleString():'—'], ['Uptime', fmtDuration(info.uptime_seconds)], ['Load average', load.map(v=>v==null?'—':Number(v).toFixed(2)).join(' / ')], ['CPU', `${info.cpu_physical||'—'} physical / ${info.cpu_logical||'—'} logical`], ['Dashboard OS user', info.dashboard_user||'—'], ['Management login', info.management_allowed?'allowed':'read-only'], ['Managed services', managed]]; byId('system-info').innerHTML=fields.map(([l,v])=>`<div class="info-box"><div class="info-label">${esc(l)}</div><div class="info-value ${l==='Platform'||l==='Managed services'?'mono':''}">${esc(v)}</div></div>`).join(''); }
+function initChart(){ if(typeof Chart==='undefined') return; const canvas=byId('net-chart'); netChart=new Chart(canvas.getContext('2d'),{type:'line',data:{labels:[],datasets:[{label:'Upload',data:[],borderColor:'#d98a44',backgroundColor:'rgba(217,138,68,.07)',fill:true,tension:.35,pointRadius:0,borderWidth:2},{label:'Download',data:[],borderColor:'#7a8fa6',backgroundColor:'rgba(122,143,166,.07)',fill:true,tension:.35,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{labels:{color:'#85817a',font:{size:10}}}},scales:{x:{grid:{color:'#1b212b'},ticks:{color:'#5e5b57',font:{size:9},maxTicksLimit:8}},y:{beginAtZero:true,grid:{color:'#1b212b'},ticks:{color:'#5e5b57',font:{size:9},callback:v=>fmtRate(v)}}}}}); }
+function updateChart(io, timestamp){ if(!netChart||!io) return; const now=num(timestamp)*1000||Date.now(); if(lastNet){ const dt=(now-lastNet.t)/1000; if(dt>0){ const up=Math.max(0,(io.bytes_sent-lastNet.sent)/dt); const down=Math.max(0,(io.bytes_recv-lastNet.recv)/dt); chartHistory.labels.push(new Date(now).toLocaleTimeString()); chartHistory.up.push(up); chartHistory.down.push(down); if(chartHistory.labels.length>40){chartHistory.labels.shift();chartHistory.up.shift();chartHistory.down.shift();} netChart.data.labels=chartHistory.labels; netChart.data.datasets[0].data=chartHistory.up; netChart.data.datasets[1].data=chartHistory.down; netChart.update('none'); }} lastNet={sent:io.bytes_sent,recv:io.bytes_recv,t:now}; }
+function renderLive(d){ latestData=d; byId('hdr-hostname').textContent=d.hostname||'—'; byId('sidebar-user').textContent='Signed in: '+(d.user||'—'); const cpu=num(d.cpu?.percent), mem=num(d.memory?.percent), disk=d.disk_default||d.disks?.[0]||null, dp=num(disk?.percent); byId('sum-cpu').textContent=cpu.toFixed(1); byId('sum-mem').textContent=mem.toFixed(1); byId('sum-disk').textContent=dp.toFixed(1); byId('sum-uptime').textContent=fmtDuration(d.system?.uptime_seconds); byId('cpu-total').textContent=cpu.toFixed(1); byId('cpu-bar').style.width=Math.min(100,cpu)+'%'; byId('cpu-badge').textContent=(d.cpu?.count||0)+' cores'; byId('cpu-freq').textContent=d.cpu?.frequency?Number(d.cpu.frequency).toFixed(0)+' MHz':'—'; renderCores(d.cpu?.per_cpu||[],d.cpu?.count||0); byId('mem-pct').textContent=mem.toFixed(1); byId('mem-bar').style.width=Math.min(100,mem)+'%'; byId('mem-used').textContent=fmtBytes(d.memory?.used)+' used'; byId('mem-total').textContent=fmtBytes(d.memory?.total); byId('mem-avail').textContent=fmtBytes(d.memory?.available); byId('disk-badge').textContent=(d.disks?.length||0)+' mounts'; byId('disk-pct').textContent=dp.toFixed(1); byId('disk-bar').style.width=Math.min(100,dp)+'%'; byId('disk-used').textContent=disk?fmtBytes(disk.used)+' used · '+disk.mountpoint:'—'; byId('disk-total').textContent=disk?fmtBytes(disk.total):'—'; byId('disk-free').textContent=disk?fmtBytes(disk.available):'—'; renderGPUs(d.gpus||[]); renderQuickProcesses(d.processes||[]); renderStorage(d.disks||[]); renderInterfaces(d.net_per_interface||{},d.ips||[]); renderSystem(d.system); byId('net-up-total').textContent=fmtBytes(d.net_io?.bytes_sent); byId('net-down-total').textContent=fmtBytes(d.net_io?.bytes_recv); byId('net-pkt-out').textContent=num(d.net_io?.packets_sent).toLocaleString(); byId('net-pkt-in').textContent=num(d.net_io?.packets_recv).toLocaleString(); updateChart(d.net_io,d.timestamp); }
+async function refreshLive(){ try { const res=await fetch('/data',{cache:'no-store'}); if(res.status===401){location.href='/login';return;} if(!res.ok) throw new Error(`HTTP ${res.status}`); renderLive(await res.json()); } catch(err){ console.error(err); } }
+function serviceStatusClass(s){ if(s.active==='active')return'active'; if(s.active==='failed'||s.sub==='failed')return'failed'; return'inactive'; }
+function renderServices(){ const q=byId('services-search').value.trim().toLowerCase(); const rows=serviceRows.filter(s=>!q||`${s.name} ${s.active} ${s.sub} ${s.description}`.toLowerCase().includes(q)); byId('services-count').textContent=`${rows.length} / ${serviceRows.length}`; byId('services-body').innerHTML=rows.length?rows.map(s=>`<tr><td class="mono">${esc(s.name)}</td><td><span class="status ${serviceStatusClass(s)}"><span class="status-dot"></span>${esc(s.active)}</span></td><td>${esc(s.sub)}</td><td>${esc(s.description)}</td><td class="right"><div class="actions"><button class="btn success service-act" data-service="${esc(s.name)}" data-action="start" ${s.manageable?'':'disabled'}>Start</button><button class="btn service-act" data-service="${esc(s.name)}" data-action="restart" ${s.manageable?'':'disabled'}>Restart</button><button class="btn danger service-act" data-service="${esc(s.name)}" data-action="stop" ${s.manageable?'':'disabled'}>Stop</button></div></td></tr>`).join(''):'<tr><td colspan="5" class="empty">Tidak ada service yang cocok.</td></tr>'; document.querySelectorAll('.service-act').forEach(btn=>btn.addEventListener('click',()=>serviceAction(btn.dataset.service,btn.dataset.action))); }
+async function loadServices(){ byId('services-body').innerHTML='<tr><td colspan="5" class="loading">Loading services...</td></tr>'; try { const p=await api('/api/services'); serviceRows=p.services||[]; renderServices(); const list=(p.managed_services||[]).join(', '); byId('services-notice').innerHTML=list?`<strong>Managed units:</strong> <span class="mono">${esc(list)}</span>. Action buttons still depend on OS systemd permissions.`:`<strong>Read-only:</strong> set <span class="mono">DASHBOARD_MANAGED_SERVICES=nginx.service,docker.service</span> in the service environment to enable selected actions.`; } catch(err){byId('services-body').innerHTML=`<tr><td colspan="5" class="empty">${esc(err.message)}</td></tr>`;} }
+async function serviceAction(service,action){ if(!confirm(`${action.toUpperCase()} ${service}?`)) return; try { await api(`/api/services/${encodeURIComponent(service)}/${action}`,{method:'POST'}); toast(`${service}: ${action} berhasil`); setTimeout(loadServices,500); } catch(err){toast(err.message,'error');} }
+function renderProcesses(){ const q=byId('processes-search').value.trim().toLowerCase(); const rows=processRows.filter(p=>!q||`${p.pid} ${p.name} ${p.username} ${p.status} ${p.command}`.toLowerCase().includes(q)); byId('processes-count').textContent=`${rows.length} / ${processRows.length}`; byId('processes-body').innerHTML=rows.length?rows.map(p=>`<tr><td class="mono">${p.pid}</td><td class="mono">${esc(p.name)}</td><td>${esc(p.username)}</td><td>${esc(p.status)}</td><td class="right" style="color:var(--cpu)">${num(p.cpu_percent).toFixed(1)}%</td><td class="right" style="color:var(--mem)">${num(p.memory_percent).toFixed(1)}%</td><td class="mono ellipsis" style="max-width:360px" title="${esc(p.command)}">${esc(p.command||'—')}</td><td class="right"><button class="btn danger proc-kill" data-pid="${p.pid}" data-name="${esc(p.name)}" ${p.manageable?'':'disabled'}>Terminate</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">Tidak ada process yang cocok.</td></tr>'; document.querySelectorAll('.proc-kill').forEach(btn=>btn.addEventListener('click',()=>terminateProcess(btn.dataset.pid,btn.dataset.name))); }
+async function loadProcesses(){ byId('processes-body').innerHTML='<tr><td colspan="8" class="loading">Loading processes...</td></tr>'; try { const p=await api('/api/processes?limit=150'); processRows=p.processes||[]; renderProcesses(); } catch(err){byId('processes-body').innerHTML=`<tr><td colspan="8" class="empty">${esc(err.message)}</td></tr>`;} }
+async function terminateProcess(pid,name){ if(!confirm(`Kirim SIGTERM ke ${name} (PID ${pid})?`)) return; try { const p=await api(`/api/processes/${pid}/terminate`,{method:'POST'}); toast(p.message||`PID ${pid} terminated`); setTimeout(loadProcesses,400); } catch(err){toast(err.message,'error');} }
+byId('services-refresh').addEventListener('click',loadServices); byId('services-search').addEventListener('input',renderServices); byId('processes-refresh').addEventListener('click',loadProcesses); byId('processes-search').addEventListener('input',renderProcesses);
+(function initSortable(){ if(typeof Sortable==='undefined') return; const grid=byId('grid-sortable'); const key='dashboard_card_order_v2'; let order=[]; try{order=JSON.parse(localStorage.getItem(key))||[]}catch(_){} order.forEach(id=>{const el=grid.querySelector(`[data-card-id="${CSS.escape(id)}"]`); if(el)grid.appendChild(el);}); Sortable.create(grid,{animation:180,handle:'.card-header',ghostClass:'sortable-ghost',onEnd:()=>{const ids=[...grid.children].map(x=>x.dataset.cardId);try{localStorage.setItem(key,JSON.stringify(ids))}catch(_){}}}); })();
+initChart(); setView((location.hash||'#overview').slice(1), false); refreshLive(); setInterval(refreshLive, 2000);
 </script>
 </body>
 </html>

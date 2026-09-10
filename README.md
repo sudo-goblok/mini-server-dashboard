@@ -2,6 +2,12 @@
 
 Lightweight Flask dashboard for monitoring and controlled management of a Linux/GPU server.
 
+## Screenshot
+
+![Mini Server Dashboard overview on gpu-server](docs/dashboard-overview.webp)
+
+*Dashboard overview with live CPU, memory, swap, disk, GPU, network, and process monitoring on `gpu-server`.*
+
 ## Features
 
 - Live CPU, per-core usage, memory, swap, disk, GPU and network monitoring

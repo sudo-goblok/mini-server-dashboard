@@ -1,0 +1,18 @@
+[Unit]
+Description=Mini Server Dashboard - Web-based system monitoring
+After=network.target
+
+[Service]
+Type=simple
+User=deepuser
+WorkingDirectory=/Apps/dashboard
+ExecStart=/usr/bin/python3 /Apps/dashboard/app.py
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+# Optionally bind to specific port (default 5000)
+# Environment=PORT=5000
+
+[Install]
+WantedBy=multi-user.target

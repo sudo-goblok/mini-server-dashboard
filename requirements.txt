@@ -1,0 +1,5 @@
+flask
+psutil
+gputil
+python-pam
+six

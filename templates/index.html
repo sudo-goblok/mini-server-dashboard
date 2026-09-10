@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Server</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
     <style>
         :root {
             --bg-main: #0c0f14;
@@ -185,6 +186,24 @@
             margin-bottom: 14px;
             padding-bottom: 10px;
             border-bottom: 1px solid var(--border);
+            cursor: grab;
+            user-select: none;
+        }
+
+        .card-header:active {
+            cursor: grabbing;
+        }
+
+        .sortable-ghost {
+            opacity: 0.4;
+            background: var(--bg-card-alt);
+            border: 2px dashed var(--cpu-color);
+        }
+
+        .sortable-drag {
+            opacity: 1;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            transform: rotate(2deg);
         }
 
         .card-label {
@@ -700,6 +719,26 @@
             .net-stats { grid-template-columns: 1fr; }
         }
     </style>
+    <script>
+    // === Load saved order ===
+    let cardOrder = [];
+    try {
+        cardOrder = JSON.parse(localStorage.getItem('dashboard_card_order')) || [];
+    } catch(e) {
+        cardOrder = [];
+    }
+
+    function saveOrder() {
+        const items = document.querySelectorAll('#grid-sortable > .card');
+        const order = [];
+        items.forEach(el => {
+            order.push(el.dataset.cardId || el.querySelector('.card-label').textContent.trim());
+        });
+        try {
+            localStorage.setItem('dashboard_card_order', JSON.stringify(order));
+        } catch(e) {}
+    }
+    </script>
 </head>
 <body>
 <div class="app">
@@ -728,9 +767,9 @@
         </div>
     </header>
 
-    <div class="grid">
+    <div class="grid" id="grid-sortable">
 
-        <div class="card">
+        <div class="card" data-card-id="cpu">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon cpu">⚙</span> CPU</span>
                 <span class="card-badge" id="cpu-cores-badge">— cores</span>
@@ -748,7 +787,7 @@
             <div class="core-grid" id="core-grid"></div>
         </div>
 
-        <div class="card">
+        <div class="card" data-card-id="mem">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon mem">🧠</span> Memory</span>
                 <span class="card-badge">RAM</span>
@@ -777,7 +816,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-card-id="disk">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon disk">💾</span> Disk</span>
                 <span class="card-badge" id="disk-count-badge">—</span>
@@ -820,7 +859,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-card-id="gpu">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon gpu">🎮</span> GPU</span>
                 <span class="card-badge" id="gpu-count-badge">—</span>
@@ -830,7 +869,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-card-id="net">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon net">🌐</span> Network I/O</span>
                 <span class="card-badge">real-time</span>
@@ -858,7 +897,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-card-id="proc">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon proc">📊</span> Top Processes</span>
                 <span class="card-badge">CPU + MEM</span>
@@ -1270,6 +1309,31 @@ function update() {
 initNetChart();
 setInterval(update, 2000);
 update();
+
+// === Init SortableJS for card drag-drop with persistence ===
+(function initSortable() {
+    const grid = document.getElementById('grid-sortable');
+    if (!grid || typeof Sortable === 'undefined') return;
+
+    Sortable.create(grid, {
+        animation: 200,
+        handle: '.card-header',
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onEnd: function(evt) {
+            saveOrder();
+        }
+    });
+
+    // If saved order exists, apply it
+    if (cardOrder.length > 0) {
+        const cards = grid.querySelectorAll('.card');
+        cardOrder.forEach(id => {
+            const el = grid.querySelector(`.card[data-card-id="${id}"]`);
+            if (el) grid.appendChild(el);
+        });
+    }
+})();
 </script>
 </body>
 </html>

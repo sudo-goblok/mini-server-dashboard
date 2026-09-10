@@ -10,6 +10,7 @@ ExecStart=/usr/bin/python3 /Apps/dashboard/server.py
 Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+Environment=PORT=19090
 
 [Install]
 WantedBy=multi-user.target

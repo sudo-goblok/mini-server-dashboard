@@ -3,6 +3,8 @@
 Keeps the core application in app.py stable while adding swap telemetry and
 loading focused UI enhancements for memory/storage details.
 """
+import os
+
 import psutil
 from flask import render_template
 
@@ -49,5 +51,13 @@ core.app.view_functions["index"] = enhanced_index
 app = core.app
 
 
+def get_port():
+    try:
+        port = int(os.environ.get("PORT", "19090"))
+    except (TypeError, ValueError):
+        return 19090
+    return port if 1 <= port <= 65535 else 19090
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=get_port(), debug=False)

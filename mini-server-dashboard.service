@@ -10,9 +10,9 @@ ExecStart=/usr/bin/python3 /Apps/dashboard/server.py
 Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+Environment=PORT=19090
 
-# Optionally bind to specific port (default 5000)
-# Environment=PORT=5000
+# Override PORT if a different listener is required.
 
 [Install]
 WantedBy=multi-user.target

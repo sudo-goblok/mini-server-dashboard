@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Dashboard Server</title>
+    <style>
+        :root {
+            --bg-main: #0c0f14;
+            --bg-card: #141820;
+            --bg-card-alt: #181c25;
+            --border: #1e2530;
+            --border-light: #2a3340;
+            --text: #e8e6e1;
+            --text-muted: #7a7670;
+            --text-dim: #555250;
+            --cpu-color: #c9a962;
+            --mem-color: #6b8e7f;
+            --danger: #c44545;
+            --success: #6b8e5a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-main);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px 36px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .login-subtitle {
+            font-size: 0.78rem;
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+        }
+
+        .login-error {
+            background: rgba(196, 69, 69, 0.12);
+            border: 1px solid rgba(196, 69, 69, 0.3);
+            color: var(--danger);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            margin-bottom: 18px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--cpu-color);
+            box-shadow: 0 0 0 2px rgba(201, 169, 98, 0.15);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--cpu-color);
+            color: #0c0f14;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn:hover {
+            background: #d4b46a;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .login-footer {
+            margin-top: 20px;
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-title">🔐 Dashboard Server</div>
+        <div class="login-subtitle">Login dengan akun Linux</div>
+        {% if error %}
+        <div class="login-error">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/login">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-input" placeholder="Masukkan username Linux" required autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-input" placeholder="Masukkan password Linux" required>
+            </div>
+            <button type="submit" class="btn">Login</button>
+        </form>
+        <div class="login-footer">Server Dashboard · Autentikasi PAM Linux</div>
+    </div>
+</body>
+</html>

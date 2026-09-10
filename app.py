@@ -2,14 +2,184 @@ import os
 import json
 import time
 import socket
+import subprocess
+import re
 import psutil
 import GPUtil
-from flask import Flask, render_template, jsonify
+from functools import wraps
+import pam
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
+
+def check_auth(username, password):
+    """Verify Linux user credentials using PAM."""
+    try:
+        p = pam.pam()
+        return p.authenticate(username, password)
+    except Exception:
+        return False
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+def parse_nvidia_smi():
+    result = []
+    try:
+        cmd = [
+            'nvidia-smi',
+            '--query-gpu=name,temperature.gpu,utilization.gpu,utilization.memory,'
+            'clocks.current.sm,clocks.current.memory,clocks.current.video,'
+            'clocks.current.graphics,power.draw,power.limit,'
+            'memory.total,memory.used,memory.free',
+            '--format=csv,noheader,nounits'
+        ]
+        out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=5).decode('utf-8').strip()
+        if not out:
+            return result
+        for line in out.split('\n'):
+            if not line.strip():
+                continue
+            parts = [p.strip() for p in line.split(',')]
+            if len(parts) < 13:
+                continue
+            try:
+                gpu = {
+                    'name': parts[0],
+                    'temperature': float(parts[1]) if parts[1] != 'N/A' else None,
+                    'gpu_util': float(parts[2]) if parts[2] != 'N/A' else None,
+                    'mem_util': float(parts[3]) if parts[3] != 'N/A' else None,
+                    'sm_clock': float(parts[4]) if parts[4] != 'N/A' else None,
+                    'mem_clock': float(parts[5]) if parts[5] != 'N/A' else None,
+                    'video_clock': float(parts[6]) if parts[6] != 'N/A' else None,
+                    'graphics_clock': float(parts[7]) if parts[7] != 'N/A' else None,
+                    'power_draw': float(parts[8]) if parts[8] != 'N/A' else None,
+                    'power_limit': float(parts[9]) if parts[9] != 'N/A' else None,
+                    'memory_total': float(parts[10]) if parts[10] != 'N/A' else None,
+                    'memory_used': float(parts[11]) if parts[11] != 'N/A' else None,
+                    'memory_free': float(parts[12]) if parts[12] != 'N/A' else None,
+                    'source': 'nvidia-smi'
+                }
+                result.append(gpu)
+            except (ValueError, IndexError):
+                continue
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+        pass
+    return result
+
+def get_gputil_gpus():
+    gpus = []
+    try:
+        gpu_list = GPUtil.getGPUs()
+        for gpu in gpu_list:
+            gpus.append({
+                'id': gpu.id,
+                'name': gpu.name,
+                'load': gpu.load * 100,
+                'memoryTotal': gpu.memoryTotal,
+                'memoryUsed': gpu.memoryUsed,
+                'memoryFree': gpu.memoryFree,
+                'temperature': gpu.temperature,
+                'source': 'gputil'
+            })
+    except Exception:
+        pass
+    return gpus
+
+def merge_gpu_data(smi_gpus, gputil_gpus):
+    merged = []
+    smi_by_name = {g['name']: g for g in smi_gpus}
+    for gputil_gpu in gputil_gpus:
+        name = gputil_gpu['name']
+        smi = smi_by_name.get(name)
+        if smi:
+            entry = {
+                'id': gputil_gpu['id'],
+                'name': name,
+                'load': smi.get('gpu_util'),
+                'mem_util': smi.get('mem_util'),
+                'temperature': smi.get('temperature'),
+                'sm_clock': smi.get('sm_clock'),
+                'mem_clock': smi.get('mem_clock'),
+                'graphics_clock': smi.get('graphics_clock'),
+                'video_clock': smi.get('video_clock'),
+                'power_draw': smi.get('power_draw'),
+                'power_limit': smi.get('power_limit'),
+                'memoryTotal': smi.get('memory_total'),
+                'memoryUsed': smi.get('memory_used'),
+                'memoryFree': smi.get('memory_free'),
+                'source': 'nvidia-smi+gputil'
+            }
+        else:
+            entry = {
+                'id': gputil_gpu['id'],
+                'name': name,
+                'load': gputil_gpu['load'],
+                'mem_util': None,
+                'temperature': gputil_gpu['temperature'],
+                'sm_clock': None,
+                'mem_clock': None,
+                'graphics_clock': None,
+                'video_clock': None,
+                'power_draw': None,
+                'power_limit': None,
+                'memoryTotal': gputil_gpu['memoryTotal'],
+                'memoryUsed': gputil_gpu['memoryUsed'],
+                'memoryFree': gputil_gpu['memoryFree'],
+                'source': 'gputil-only'
+            }
+        merged.append(entry)
+    if not merged and smi_gpus:
+        for i, smi in enumerate(smi_gpus):
+            merged.append({
+                'id': i,
+                'name': smi['name'],
+                'load': smi.get('gpu_util'),
+                'mem_util': smi.get('mem_util'),
+                'temperature': smi.get('temperature'),
+                'sm_clock': smi.get('sm_clock'),
+                'mem_clock': smi.get('mem_clock'),
+                'graphics_clock': smi.get('graphics_clock'),
+                'video_clock': smi.get('video_clock'),
+                'power_draw': smi.get('power_draw'),
+                'power_limit': smi.get('power_limit'),
+                'memoryTotal': smi.get('memory_total'),
+                'memoryUsed': smi.get('memory_used'),
+                'memoryFree': smi.get('memory_free'),
+                'source': 'nvidia-smi-only'
+            })
+    return merged
+
+def get_disk_detail():
+    """Get disk info similar to df -h output."""
+    disks = []
+    for part in psutil.disk_partitions(all=False):
+        try:
+            usage = psutil.disk_usage(part.mountpoint)
+            disks.append({
+                'device': part.device,
+                'mountpoint': part.mountpoint,
+                'fstype': part.fstype,
+                'opts': part.opts,
+                'total': usage.total,
+                'used': usage.used,
+                'free': usage.free,
+                'percent': usage.percent
+            })
+        except PermissionError:
+            # Some mountpoints require root
+            continue
+        except Exception:
+            continue
+    return disks
 
 def get_system_stats():
-    # Hostname & IP
     hostname = socket.gethostname()
     ips = []
     try:
@@ -20,22 +190,24 @@ def get_system_stats():
     except Exception:
         ips = [{'interface': 'unknown', 'ip': 'N/A'}]
 
-    # CPU — per-core sudah di-request di sini supaya akurat per iterasi
     cpu_percent_total = psutil.cpu_percent(interval=0.1)
     cpu_percent_per_cpu = psutil.cpu_percent(interval=0.1, percpu=True)
     cpu_count = psutil.cpu_count()
     cpu_freq = psutil.cpu_freq()
 
-    # Memory
     mem = psutil.virtual_memory()
 
-    # Disk
-    disk = psutil.disk_usage('/')
+    # Disk: full detail like df -h
+    disks = get_disk_detail()
+    default_disk = None
+    for d in disks:
+        if d['mountpoint'] == '/':
+            default_disk = d
+            break
+    if not default_disk and disks:
+        default_disk = disks[0]
 
-    # Network I/O (bytes)
     net_io = psutil.net_io_counters()
-
-    # Network I/O per interface
     net_per_interface = {}
     for ifname, addrs in psutil.net_if_addrs().items():
         try:
@@ -50,28 +222,17 @@ def get_system_stats():
         except Exception:
             pass
 
-    # GPU
-    gpus = []
-    try:
-        gpu_list = GPUtil.getGPUs()
-        for gpu in gpu_list:
-            gpus.append({
-                'id': gpu.id,
-                'name': gpu.name,
-                'load': gpu.load * 100,
-                'memoryTotal': gpu.memoryTotal,
-                'memoryUsed': gpu.memoryUsed,
-                'memoryFree': gpu.memoryFree,
-                'temperature': gpu.temperature
-            })
-    except Exception as e:
-        gpus = [{'error': str(e)}]
+    smi_gpus = parse_nvidia_smi()
+    gputil_gpus = get_gputil_gpus()
+    gpus = merge_gpu_data(smi_gpus, gputil_gpus)
 
-    # Top processes
+    EXCLUDE_PROCS = {'ollama', 'hermes', 'tailscaled', 'cloudflared'}
     processes = []
     for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent']):
         try:
             pinfo = proc.info
+            if pinfo['name'] and pinfo['name'].lower() in EXCLUDE_PROCS:
+                continue
             if (pinfo['cpu_percent'] and pinfo['cpu_percent'] > 0.0) or (pinfo['memory_percent'] and pinfo['memory_percent'] > 0.0):
                 processes.append(pinfo)
         except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -102,24 +263,41 @@ def get_system_stats():
             'used': mem.used,
             'free': mem.free
         },
-        'disk': {
-            'total': disk.total,
-            'used': disk.used,
-            'free': disk.free,
-            'percent': disk.used / disk.total * 100
-        },
+        'disks': disks,
+        'disk_default': default_disk,
         'gpus': gpus,
         'processes': top_processes,
         'timestamp': time.time()
     }
 
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 @app.route('/data')
+@login_required
 def data():
     return jsonify(get_system_stats())
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        if check_auth(username, password):
+            session['logged_in'] = True
+            session['username'] = username
+            return redirect(url_for('index'))
+        else:
+            error = 'Username atau password salah'
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

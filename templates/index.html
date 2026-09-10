@@ -10,29 +10,31 @@
             --bg-main: #0c0f14;
             --bg-card: #141820;
             --bg-card-alt: #181c25;
+            --bg-row: #1c2129;
             --border: #1e2530;
             --border-light: #2a3340;
             --text: #e8e6e1;
             --text-muted: #7a7670;
             --text-dim: #555250;
 
-            /* Warna unik per section — tidak skema neon AI */
-            --cpu-color: #c9a962;          /* amber/bronze */
+            --cpu-color: #c9a962;
             --cpu-glow: rgba(201, 169, 98, 0.15);
-            --mem-color: #6b8e7f;          /* sage/teal */
+            --mem-color: #6b8e7f;
             --mem-glow: rgba(107, 142, 127, 0.15);
-            --disk-color: #b85d4b;         /* terracotta */
+            --disk-color: #b85d4b;
             --disk-glow: rgba(184, 93, 75, 0.15);
-            --gpu-color: #5d7a5a;          /* moss green */
+            --gpu-color: #5d7a5a;
             --gpu-glow: rgba(93, 122, 90, 0.15);
-            --net-up-color: #d98a44;       /* warm orange */
-            --net-down-color: #7a8fa6;     /* slate blue-gray */
-            --proc-color: #5a6e8a;         /* muted slate blue */
+            --gpu-accent: #8ab87a;
+            --net-up-color: #d98a44;
+            --net-down-color: #7a8fa6;
+            --proc-color: #5a6e8a;
             --proc-glow: rgba(90, 110, 138, 0.12);
 
             --danger: #c44545;
             --warning: #b8954a;
             --success: #6b8e5a;
+            --power-color: #c9a962;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -53,7 +55,6 @@
             margin: 0 auto;
         }
 
-        /* === HEADER === */
         .header {
             display: flex;
             align-items: center;
@@ -140,29 +141,16 @@
             50% { opacity: 0.4; transform: scale(0.85); }
         }
 
-        /* === LAYOUT GRID === */
         .grid {
             display: grid;
             grid-template-columns: 1fr;
             gap: 16px;
         }
 
-        .grid-wide {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
         @media (min-width: 900px) {
-            .grid {
-                grid-template-columns: 1fr 1fr;
-            }
-            .grid-wide {
-                grid-template-columns: 1fr 1fr 1fr;
-            }
+            .grid { grid-template-columns: 1fr 1fr; }
         }
 
-        /* === CARD === */
         .card {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -243,7 +231,6 @@
             margin-top: 2px;
         }
 
-        /* === PROGRESS BAR === */
         .bar-track {
             height: 6px;
             background: var(--bg-main);
@@ -261,16 +248,9 @@
         .bar-fill.cpu { background: var(--cpu-color); }
         .bar-fill.mem { background: var(--mem-color); }
         .bar-fill.disk { background: var(--disk-color); }
-
-        .bar-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, rgba(255,255,255,0.08) 0%, transparent 50%);
-        }
+        .bar-fill.gpu-load { background: var(--gpu-color); }
+        .bar-fill.gpu-mem { background: var(--gpu-accent); }
+        .bar-fill.power { background: var(--power-color); }
 
         .bar-container {
             position: relative;
@@ -300,32 +280,43 @@
         .metric-value {
             font-size: 0.85rem;
             font-weight: 500;
+            font-variant-numeric: tabular-nums;
         }
 
-        /* === GPU WIDGET === */
+        /* GPU grid: full width when single GPU */
         .gpu-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 10px;
+            gap: 12px;
+        }
+
+        .gpu-grid.single-gpu {
+            grid-template-columns: 1fr;
+        }
+
+        .gpu-grid.single-gpu .gpu-box {
+            max-width: 100%;
         }
 
         @media (min-width: 500px) {
-            .gpu-grid {
-                grid-template-columns: 1fr 1fr;
-            }
+            .gpu-grid.gpu-many { grid-template-columns: 1fr 1fr; }
         }
 
         .gpu-box {
             background: var(--bg-card-alt);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 14px;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .gpu-box.full-width {
+            grid-column: 1 / -1;
         }
 
         .gpu-box h4 {
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             color: var(--gpu-color);
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -348,7 +339,109 @@
         .gpu-temp.warn { background: rgba(184, 149, 74, 0.2); color: var(--warning); }
         .gpu-temp.hot { background: rgba(196, 69, 69, 0.2); color: var(--danger); }
 
-        /* === CPU CORE GRID === */
+        .gpu-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .gpu-section-title {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .gpu-metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px 8px;
+        }
+
+        .gpu-metric-item {
+            padding: 4px 0;
+        }
+
+        .gpu-metric-label {
+            font-size: 0.62rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .gpu-metric-value {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--cpu-color);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .gpu-metric-value.power { color: var(--power-color); }
+        .gpu-metric-value.clock { color: var(--gpu-accent); }
+        .gpu-metric-value.util { color: var(--gpu-color); }
+
+        /* Disk detail table */
+        .disk-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 0.78rem;
+        }
+
+        .disk-table th {
+            text-align: left;
+            padding: 8px 10px;
+            background: var(--bg-card-alt);
+            color: var(--text-dim);
+            font-weight: 600;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .disk-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .disk-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .disk-table tr:hover td {
+            background: var(--bg-row);
+        }
+
+        .disk-device {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--disk-color);
+            font-size: 0.72rem;
+        }
+
+        .disk-mount {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--mem-color);
+            font-size: 0.72rem;
+        }
+
+        .disk-fstype {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+        }
+
+        .disk-pct {
+            font-weight: 600;
+            color: var(--disk-color);
+            text-align: right;
+        }
+
+        .disk-pct.high { color: var(--danger); }
+
         .core-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
@@ -393,7 +486,6 @@
             transition: width 0.3s ease;
         }
 
-        /* === NETWORK CHART === */
         .chart-wrap {
             height: 180px;
             position: relative;
@@ -434,7 +526,6 @@
         .net-stat-value.up { color: var(--net-up-color); }
         .net-stat-value.down { color: var(--net-down-color); }
 
-        /* === PROCESS LIST === */
         .proc-list {
             max-height: 220px;
             overflow-y: auto;
@@ -490,7 +581,6 @@
         .proc-cpu.high { color: var(--danger); }
         .proc-mem.high { color: var(--mem-color); }
 
-        /* === IP LIST === */
         .ip-list {
             display: flex;
             flex-wrap: wrap;
@@ -517,7 +607,6 @@
             color: var(--cpu-color);
         }
 
-        /* === FOOTER === */
         .footer {
             margin-top: 16px;
             text-align: center;
@@ -531,7 +620,30 @@
             color: var(--text-muted);
         }
 
-        /* === RESPONSIVE === */
+        .logged-in-as {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .logout-btn {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: none;
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
         @media (max-width: 600px) {
             body { padding: 12px; }
             .card { padding: 14px 16px; }
@@ -540,19 +652,22 @@
             .header-title { font-size: 1rem; }
             .core-grid { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
             .chart-wrap { height: 140px; }
+            .gpu-metric-grid { grid-template-columns: 1fr 1fr; }
+            .disk-table { font-size: 0.72rem; }
+            .disk-table th, .disk-table td { padding: 6px 8px; }
         }
 
         @media (max-width: 400px) {
             .grid { grid-template-columns: 1fr; }
-            .grid-wide { grid-template-columns: 1fr; }
             .core-grid { grid-template-columns: repeat(4, 1fr); }
+            .gpu-metric-grid { grid-template-columns: 1fr; }
+            .net-stats { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 <div class="app">
 
-    <!-- HEADER -->
     <header class="header">
         <div class="header-left">
             <div class="logo">⚡</div>
@@ -570,13 +685,15 @@
                 <span class="live-dot"></span>
                 LIVE
             </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span class="logged-in-as" id="user-display">—</span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
         </div>
     </header>
 
-    <!-- GRID -->
     <div class="grid">
 
-        <!-- CPU CARD -->
         <div class="card">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon cpu">⚙</span> CPU</span>
@@ -595,7 +712,6 @@
             <div class="core-grid" id="core-grid"></div>
         </div>
 
-        <!-- MEMORY CARD -->
         <div class="card">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon mem">🧠</span> Memory</span>
@@ -625,11 +741,10 @@
             </div>
         </div>
 
-        <!-- DISK CARD -->
         <div class="card">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon disk">💾</span> Disk</span>
-                <span class="card-badge">/</span>
+                <span class="card-badge" id="disk-count-badge">—</span>
             </div>
             <div class="value-large">
                 <span id="disk-pct">0</span><span class="value-unit">%</span>
@@ -649,9 +764,24 @@
                 <span class="metric-label">Free</span>
                 <span class="metric-value" id="disk-free">—</span>
             </div>
+            <table class="disk-table" id="disk-table">
+                <thead>
+                    <tr>
+                        <th>Device</th>
+                        <th>Mount</th>
+                        <th>Type</th>
+                        <th style="text-align:right">Total</th>
+                        <th style="text-align:right">Used</th>
+                        <th style="text-align:right">Free</th>
+                        <th style="text-align:right">Use%</th>
+                    </tr>
+                </thead>
+                <tbody id="disk-tbody">
+                    <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:12px;">Loading...</td></tr>
+                </tbody>
+            </table>
         </div>
 
-        <!-- GPU CARD -->
         <div class="card">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon gpu">🎮</span> GPU</span>
@@ -662,8 +792,7 @@
             </div>
         </div>
 
-        <!-- NETWORK CHART — wider on large screens -->
-        <div class="card" style="grid-column: span 1;">
+        <div class="card">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon net">🌐</span> Network I/O</span>
                 <span class="card-badge">real-time</span>
@@ -691,7 +820,6 @@
             </div>
         </div>
 
-        <!-- PROCESSES -->
         <div class="card">
             <div class="card-header">
                 <span class="card-label"><span class="card-icon proc">📊</span> Top Processes</span>
@@ -711,7 +839,6 @@
 </div>
 
 <script>
-// === helpers ===
 function fmtBytes(b, d=1) {
     if (b === 0) return '0 B';
     const k = 1024;
@@ -726,7 +853,6 @@ function fmtRate(b) {
     return (b/(1024*1024)).toFixed(1) + ' MB/s';
 }
 
-// === network chart state ===
 const chartHist = { labels: [], up: [], down: [] };
 const MAXP = 40;
 let netChart = null;
@@ -838,7 +964,6 @@ function updateNetChart(sent, recv, ts) {
     lastT = now;
 }
 
-// === per-core CPU ===
 function renderCores(perCpu, count) {
     const grid = document.getElementById('core-grid');
     grid.innerHTML = '';
@@ -855,7 +980,6 @@ function renderCores(perCpu, count) {
     }
 }
 
-// === GPU render ===
 function renderGPUs(gpus) {
     const grid = document.getElementById('gpu-grid');
     grid.innerHTML = '';
@@ -866,46 +990,171 @@ function renderGPUs(gpus) {
     }
     document.getElementById('gpu-count-badge').textContent = gpus.length + ' GPU';
 
+    // Jika hanya 1 GPU, full width; jika banyak, grid 2 kolom
+    if (gpus.length === 1) {
+        grid.classList.add('single-gpu');
+    } else {
+        grid.classList.remove('single-gpu');
+        grid.classList.add('many-gpu');
+    }
+
     gpus.forEach(g => {
-        if (g.error) {
-            grid.innerHTML += '<div style="color:var(--danger); font-size:0.78rem; padding:8px 0;">Error: ' + g.error + '</div>';
-            return;
-        }
-        const load = g.load.toFixed(1);
-        const memPct = (g.memoryUsed / g.memoryTotal) * 100;
-        const temp = g.temperature !== undefined ? g.temperature : 0;
+        const load = g.load !== null && g.load !== undefined ? g.load.toFixed(1) : '—';
+        const memUtil = g.mem_util !== null && g.mem_util !== undefined ? g.mem_util.toFixed(1) : '—';
+        const temp = g.temperature !== null && g.temperature !== undefined ? g.temperature : 0;
         let tempCls = 'ok';
         if (temp > 85) tempCls = 'hot';
         else if (temp > 70) tempCls = 'warn';
 
+        const smClock = g.sm_clock !== null && g.sm_clock !== undefined ? Math.round(g.sm_clock) : '—';
+        const memClock = g.mem_clock !== null && g.mem_clock !== undefined ? Math.round(g.mem_clock) : '—';
+        const gfxClock = g.graphics_clock !== null && g.graphics_clock !== undefined ? Math.round(g.graphics_clock) : '—';
+        const powerDraw = g.power_draw !== null && g.power_draw !== undefined ? g.power_draw.toFixed(1) : '—';
+        const powerLimit = g.power_limit !== null && g.power_limit !== undefined ? g.power_limit.toFixed(0) : '—';
+        const powerPct = (g.power_draw !== null && g.power_limit && g.power_limit > 0 && g.power_draw !== null)
+            ? (g.power_draw / g.power_limit * 100).toFixed(1) : '—';
+
+        const memTotal = g.memoryTotal !== null && g.memoryTotal !== undefined ? g.memoryTotal : 0;
+        const memUsed = g.memoryUsed !== null && g.memoryUsed !== undefined ? g.memoryUsed : 0;
+        const memFree = g.memoryFree !== null && g.memoryFree !== undefined ? g.memoryFree : 0;
+
         const box = document.createElement('div');
-        box.className = 'gpu-box';
+        box.className = 'gpu-box' + (gpus.length === 1 ? ' full-width' : '');
         box.innerHTML = `
             <h4><span class="card-icon gpu" style="width:16px;height:16px;font-size:9px;">🎮</span> GPU ${g.id}: ${g.name}</h4>
+
             <div class="metric-row">
-                <span class="metric-label">Load</span>
-                <span class="metric-value" style="color:var(--gpu-color)">${load}%</span>
+                <span class="metric-label">Load GPU</span>
+                <span class="metric-value util">${load}%</span>
             </div>
             <div class="bar-container">
-                <div class="bar-track"><div class="bar-fill" style="width:${load}%;background:var(--gpu-color)"></div></div>
+                <div class="bar-track"><div class="bar-fill gpu-load" style="width:${load}%;background:var(--gpu-color)"></div></div>
             </div>
+
             <div class="metric-row">
-                <span class="metric-label">Memory</span>
-                <span class="metric-value">${fmtBytes(g.memoryUsed*1024)} / ${fmtBytes(g.memoryTotal*1024)}</span>
+                <span class="metric-label">Load Mem</span>
+                <span class="metric-value util">${memUtil}%</span>
             </div>
             <div class="bar-container">
-                <div class="bar-track"><div class="bar-fill" style="width:${memPct}%;background:var(--gpu-color)"></div></div>
+                <div class="bar-track"><div class="bar-fill gpu-mem" style="width:${memUtil}%;background:var(--gpu-accent)"></div></div>
             </div>
+
             <div class="metric-row">
-                <span class="metric-label">Temp</span>
+                <span class="metric-label">Temperature</span>
                 <span class="metric-value"><span class="gpu-temp ${tempCls}">${temp}°C</span></span>
+            </div>
+
+            <div class="gpu-section">
+                <div class="gpu-section-title">Clock Speeds (MHz)</div>
+                <div class="gpu-metric-grid">
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">SM / Core</div>
+                        <div class="gpu-metric-value clock">${smClock}</div>
+                    </div>
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">Memory</div>
+                        <div class="gpu-metric-value clock">${memClock}</div>
+                    </div>
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">Graphics</div>
+                        <div class="gpu-metric-value clock">${gfxClock}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gpu-section">
+                <div class="gpu-section-title">Power</div>
+                <div class="gpu-metric-grid">
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">Draw</div>
+                        <div class="gpu-metric-value power">${powerDraw} W</div>
+                    </div>
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">Limit</div>
+                        <div class="gpu-metric-value power">${powerLimit} W</div>
+                    </div>
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">Usage</div>
+                        <div class="gpu-metric-value power">${powerPct}%</div>
+                    </div>
+                </div>
+                <div class="bar-container" style="margin-top:6px;">
+                    <div class="bar-track"><div class="bar-fill power" style="width:${powerPct}%;background:var(--power-color)"></div></div>
+                </div>
+            </div>
+
+            <div class="gpu-section">
+                <div class="gpu-section-title">Memory (VRAM)</div>
+                <div class="gpu-metric-grid">
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">Total</div>
+                        <div class="gpu-metric-value">${fmtBytes(memTotal * 1024 * 1024)}</div>
+                    </div>
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">Used</div>
+                        <div class="gpu-metric-value">${fmtBytes(memUsed * 1024 * 1024)}</div>
+                    </div>
+                    <div class="gpu-metric-item">
+                        <div class="gpu-metric-label">Free</div>
+                        <div class="gpu-metric-value">${fmtBytes(memFree * 1024 * 1024)}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-row" style="margin-top:8px;">
+                <span class="metric-label">Source</span>
+                <span class="metric-value" style="font-size:0.68rem;color:var(--text-dim)">${g.source || '—'}</span>
             </div>
         `;
         grid.appendChild(box);
     });
 }
 
-// === processes ===
+function renderDisks(disks, defaultDisk) {
+    const tbody = document.getElementById('disk-tbody');
+    tbody.innerHTML = '';
+    if (!disks || disks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:12px;">Tidak ada data disk</td></tr>';
+        document.getElementById('disk-count-badge').textContent = '0';
+        return;
+    }
+
+    document.getElementById('disk-count-badge').textContent = disks.length + ' mount';
+    disks.forEach(d => {
+        const pct = d.percent;
+        const pctCls = pct > 90 ? 'high' : '';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><span class="disk-device">${d.device}</span></td>
+            <td><span class="disk-mount">${d.mountpoint}</span></td>
+            <td><span class="disk-fstype">${d.fstype || '—'}</span></td>
+            <td style="text-align:right">${fmtBytes(d.total)}</td>
+            <td style="text-align:right">${fmtBytes(d.used)}</td>
+            <td style="text-align:right">${fmtBytes(d.free)}</td>
+            <td style="text-align:right"><span class="disk-pct ${pctCls}">${pct.toFixed(1)}%</span></td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Update default disk summary (the big number at top)
+    if (defaultDisk) {
+        document.getElementById('disk-pct').textContent = defaultDisk.percent.toFixed(1);
+        document.getElementById('disk-bar').style.width = defaultDisk.percent + '%';
+        document.getElementById('disk-bar-label').textContent = defaultDisk.percent.toFixed(1) + '%';
+        document.getElementById('disk-used').textContent = fmtBytes(defaultDisk.used) + ' used (' + defaultDisk.mountpoint + ')';
+        document.getElementById('disk-total').textContent = fmtBytes(defaultDisk.total);
+        document.getElementById('disk-free').textContent = fmtBytes(defaultDisk.free);
+    } else if (disks.length > 0) {
+        const d = disks[0];
+        document.getElementById('disk-pct').textContent = d.percent.toFixed(1);
+        document.getElementById('disk-bar').style.width = d.percent + '%';
+        document.getElementById('disk-bar-label').textContent = d.percent.toFixed(1) + '%';
+        document.getElementById('disk-used').textContent = fmtBytes(d.used) + ' used';
+        document.getElementById('disk-total').textContent = fmtBytes(d.total);
+        document.getElementById('disk-free').textContent = fmtBytes(d.free);
+    }
+}
+
 function renderProcs(procs) {
     const list = document.getElementById('proc-list');
     list.innerHTML = '';
@@ -927,12 +1176,10 @@ function renderProcs(procs) {
     });
 }
 
-// === main update ===
 function update() {
     fetch('/data')
         .then(r => r.json())
         .then(d => {
-            // Header
             document.getElementById('hdr-hostname').textContent = d.hostname || '—';
             const ips = d.ips || [];
             const mainIP = ips.find(i => !i.interface.includes('lo')) || ips[0];
@@ -942,7 +1189,6 @@ function update() {
                 `<span class="ip-chip"><span class="iface">${ip.interface}</span><span class="addr">${ip.ip}</span></span>`
             ).join('');
 
-            // CPU
             const cpuPct = d.cpu.percent;
             document.getElementById('cpu-total').textContent = cpuPct.toFixed(1);
             document.getElementById('cpu-bar').style.width = cpuPct + '%';
@@ -956,7 +1202,6 @@ function update() {
                 document.getElementById('core-grid').innerHTML = '<div style="color:var(--text-dim);font-size:0.72rem;">Tidak ada data per-core</div>';
             }
 
-            // Memory
             const memPct = d.memory.percent;
             document.getElementById('mem-pct').textContent = memPct.toFixed(1);
             document.getElementById('mem-bar').style.width = memPct + '%';
@@ -966,38 +1211,25 @@ function update() {
             document.getElementById('mem-avail').textContent = fmtBytes(d.memory.available);
             document.getElementById('mem-used2').textContent = fmtBytes(d.memory.used);
 
-            // Disk
-            const diskPct = d.disk.percent;
-            document.getElementById('disk-pct').textContent = diskPct.toFixed(1);
-            document.getElementById('disk-bar').style.width = diskPct + '%';
-            document.getElementById('disk-bar-label').textContent = diskPct.toFixed(1) + '%';
-            document.getElementById('disk-used').textContent = fmtBytes(d.disk.used) + ' used';
-            document.getElementById('disk-total').textContent = fmtBytes(d.disk.total);
-            document.getElementById('disk-free').textContent = fmtBytes(d.disk.free);
+            // Disk detail
+            renderDisks(d.disks, d.disk_default);
 
-            // GPU
             renderGPUs(d.gpus);
 
-            // Network
             document.getElementById('net-upload-total').textContent = fmtBytes(d.net_io.bytes_sent);
             document.getElementById('net-download-total').textContent = fmtBytes(d.net_io.bytes_recv);
             document.getElementById('net-pkt-out').textContent = d.net_io.packets_sent.toLocaleString();
             document.getElementById('net-pkt-in').textContent = d.net_io.packets_recv.toLocaleString();
             updateNetChart(d.net_io.bytes_sent, d.net_io.bytes_recv, d.timestamp * 1000);
 
-            // Processes
             renderProcs(d.processes);
-
-            // Footer time
             document.getElementById('footer-time').textContent = new Date(d.timestamp * 1000).toLocaleString();
+            document.getElementById('user-display').textContent = '👤 ' + (d.user ? d.user : '—');
         })
         .catch(e => console.error('fetch error', e));
 }
 
-// Init chart once
 initNetChart();
-
-// Update loop
 setInterval(update, 2000);
 update();
 </script>

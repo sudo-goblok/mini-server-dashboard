@@ -33,6 +33,7 @@ fi
 SCRIPT_DIR=""
 case "$0" in
     */*) SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || true) ;;
+    *) [ -f "./$0" ] && SCRIPT_DIR=$(pwd) || true ;;
 esac
 
 if [ -z "${INSTALL_DIR:-}" ]; then
